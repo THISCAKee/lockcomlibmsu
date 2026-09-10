@@ -48,3 +48,23 @@ test('Next.js server modules expose the Google Sheets store boundary', () => {
   assert.match(googleSheets, /sessionsRange/);
   assert.match(googleSheets, /eventsRange/);
 });
+
+test('Next.js exposes the full LockComputer Route Handler surface', () => {
+  const routes = [
+    './app/auth/login/route.ts',
+    './app/auth/callback/route.ts',
+    './app/api/health/route.ts',
+    './app/api/me/route.ts',
+    './app/api/auth/client-exchange/route.ts',
+    './app/api/client/poll/route.ts',
+    './app/api/machines/route.ts',
+    './app/api/sessions/check-in/route.ts',
+    './app/api/sessions/[id]/heartbeat/route.ts',
+    './app/api/sessions/[id]/logout/route.ts',
+    './app/api/admin/sessions/[id]/force-logout/route.ts',
+    './app/api/admin/machines/[machineId]/shutdown/route.ts',
+    './app/api/admin/reports/monthly/route.ts',
+    './app/api/admin/export/monthly.csv/route.ts',
+  ];
+  for (const route of routes) assert.doesNotThrow(() => read(route));
+});

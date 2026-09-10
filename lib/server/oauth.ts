@@ -13,7 +13,6 @@ export function createAuthorizationUrl(config: OAuthConfig, state: string, retur
     prompt: 'select_account',
   });
   if (config.allowedEmailDomain) query.set('hd', config.allowedEmailDomain.replace(/^@/, ''));
-  query.set('returnUrl', returnUrl);
   return `${config.authorizationUrl}${config.authorizationUrl.includes('?') ? '&' : '?'}${query.toString()}`;
 }
 

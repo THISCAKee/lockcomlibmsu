@@ -77,9 +77,9 @@ export class SessionManager {
     return Array.from(this.sessions.values()).sort((left, right) => Date.parse(right.startedAt) - Date.parse(left.startedAt));
   }
 
-  restore(rows: Iterable<unknown[]>) {
-    for (const row of Array.from(rows)) {
-      const session = parseSessionRow(row);
+  restore(values: Iterable<Session | unknown[]>) {
+    for (const value of Array.from(values)) {
+      const session = Array.isArray(value) ? parseSessionRow(value) : value;
       if (session) this.sessions.set(session.id, session);
     }
     this.reconcileExpiredSessions();
