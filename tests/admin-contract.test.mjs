@@ -39,3 +39,12 @@ test('Next.js server modules expose the shared configuration boundary', () => {
   assert.match(config, /getServerConfig/);
   assert.match(config, /isKnownMachine/);
 });
+
+test('Next.js server modules expose the Google Sheets store boundary', () => {
+  const store = read('./lib/server/store.ts');
+  const googleSheets = read('./lib/server/google-sheets.ts');
+  assert.match(store, /InMemorySheetStore/);
+  assert.match(store, /GoogleSheetsStore/);
+  assert.match(googleSheets, /sessionsRange/);
+  assert.match(googleSheets, /eventsRange/);
+});
