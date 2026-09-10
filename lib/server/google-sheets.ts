@@ -1,8 +1,9 @@
 import { createSign } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
-import type { Session, SheetsConfig } from './types';
+import type { AdminRecord, Session, SheetsConfig } from './types';
 import type { SheetStore } from './store';
 import { parseSessionRow } from './session-manager';
+import { parseAdminRow } from './admin-registry';
 
 type ServiceAccount = { client_email: string; private_key: string };
 type FetchLike = (input: RequestInfo | URL, init?: RequestInit) => Promise<Response>;
@@ -28,12 +29,25 @@ export class GoogleSheetsStore implements SheetStore {
     return (body.values ?? []).map(parseSessionRow).filter((session): session is Session => session !== null);
   }
 
+  async loadAdmins(): Promise<AdminRecord[]> {
+    const response = await this.request(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(this.config.spreadsheetId)}/values/${encodeURIComponent(this.config.adminsRange ?? 'Admins!A:E')}`,
+      { headers: { authorization: `Bearer ${await this.getAccessToken()}` } },
+    );
+    const body = await response.json() as { values?: unknown[][] };
+    return (body.values ?? []).map(parseAdminRow).filter((admin): admin is AdminRecord => admin !== null);
+  }
+
   appendSession(row: unknown[]) {
     return this.enqueueWrite(() => this.append(this.config.sessionsRange, row));
   }
 
   appendEvent(row: unknown[]) {
     return this.enqueueWrite(() => this.append(this.config.eventsRange, row));
+  }
+
+  appendAdmin(row: unknown[]) {
+    return this.enqueueWrite(() => this.append(this.config.adminsRange ?? 'Admins!A:E', row));
   }
 
   private enqueueWrite(task: () => Promise<void>) {

@@ -1,6 +1,6 @@
 'use client';
 
-import { useCallback, useEffect, useMemo, useState } from 'react';
+import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { filterMachines, type MachineStatusFilter } from '../lib/machines';
 
 type Machine = {
@@ -16,6 +16,7 @@ type Machine = {
 
 type ReportRow = { userEmail?: string; machineId?: string; sessionCount: number; hours: number };
 type Report = { totalHours: number; rows: ReportRow[] };
+type Admin = { email: string; role: 'root' | 'admin'; status: 'Active'; addedBy?: string; addedAt?: string };
 
 const monthQuery = () => {
   const now = new Date();
@@ -52,6 +53,11 @@ export default function AdminPage() {
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<MachineStatusFilter>('all');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
+  const [admins, setAdmins] = useState<Admin[]>([]);
+  const [canManageAdmins, setCanManageAdmins] = useState(false);
+  const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [adminSaving, setAdminSaving] = useState(false);
+  const [adminMessage, setAdminMessage] = useState('');
 
   const load = useCallback(async (showRefresh = false) => {
     setError('');
@@ -64,14 +70,18 @@ export default function AdminPage() {
       }
 
       const { year, month } = monthQuery();
-      const [machineResponse, reportResponse] = await Promise.all([
+      const [machineResponse, reportResponse, adminsResponse] = await Promise.all([
         fetch('/api/machines'),
         fetch(`/api/admin/reports/monthly?year=${year}&month=${month}`),
+        fetch('/api/admin/admins'),
       ]);
-      if (!machineResponse.ok || !reportResponse.ok) throw new Error('โหลดข้อมูลแดชบอร์ดไม่สำเร็จ');
+      if (!machineResponse.ok || !reportResponse.ok || !adminsResponse.ok) throw new Error('โหลดข้อมูลแดชบอร์ดไม่สำเร็จ');
 
       setMachines(await machineResponse.json());
       setReport(await reportResponse.json());
+      const adminResult = await adminsResponse.json() as { admins: Admin[]; canManage: boolean };
+      setAdmins(adminResult.admins);
+      setCanManageAdmins(adminResult.canManage);
       setLastUpdated(new Date());
     } finally {
       setLoading(false);
@@ -114,6 +124,29 @@ export default function AdminPage() {
       setError(reason instanceof Error ? reason.message : 'ไม่สามารถสั่งปิดเครื่องได้');
     } finally {
       setActing('');
+    }
+  };
+
+  const addAdmin = async (event: FormEvent) => {
+    event.preventDefault();
+    setAdminSaving(true);
+    setAdminMessage('');
+    setError('');
+    try {
+      const response = await fetch('/api/admin/admins', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ email: newAdminEmail }),
+      });
+      const body = await response.json().catch(() => null) as { error?: string } | null;
+      if (!response.ok) throw new Error(body?.error ?? 'เพิ่มผู้ดูแลไม่สำเร็จ');
+      setNewAdminEmail('');
+      setAdminMessage('เพิ่มผู้ดูแลเรียบร้อยแล้ว');
+      await load(true);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'เพิ่มผู้ดูแลไม่สำเร็จ');
+    } finally {
+      setAdminSaving(false);
     }
   };
 
@@ -167,6 +200,28 @@ export default function AdminPage() {
           <div className="rate-copy"><div><p>อัตราการใช้งาน</p><strong>{utilization}%</strong></div><small>{used} จาก {machines.length} เครื่อง</small></div>
           <div className="progress"><span style={{ width: `${utilization}%` }} /></div>
         </article>
+      </section>
+
+      <section className="panel admin-panel">
+        <div className="panel-heading">
+          <div><p className="section-kicker">ADMIN ACCESS</p><h2>ผู้ดูแลระบบ</h2><p>จัดการบัญชีที่มีสิทธิ์เข้าดูแดชบอร์ดและสั่งการระบบ</p></div>
+          <span className="result-count">{admins.length} บัญชี</span>
+        </div>
+        <div className="admin-panel-body">
+          <div className="admin-list">
+            {admins.map(admin => <div className="admin-row" key={admin.email}>
+              <div className="admin-avatar">{admin.role === 'root' ? 'R' : 'A'}</div>
+              <div><strong>{admin.email}</strong><span>{admin.role === 'root' ? 'Root Admin' : `เพิ่มโดย ${admin.addedBy}`}</span></div>
+              <em>{admin.role === 'root' ? 'หลัก' : 'Active'}</em>
+            </div>)}
+          </div>
+          {canManageAdmins ? <form className="admin-form" onSubmit={addAdmin}>
+            <label htmlFor="new-admin-email">เพิ่มผู้ดูแลใหม่</label>
+            <div className="admin-form-row"><input id="new-admin-email" type="email" value={newAdminEmail} onChange={event => setNewAdminEmail(event.target.value)} placeholder="ชื่อบัญชี@msu.ac.th" required /><button className="button button-primary" type="submit" disabled={adminSaving}>{adminSaving ? 'กำลังเพิ่ม...' : 'เพิ่มผู้ดูแล'}</button></div>
+            <small>รับเฉพาะบัญชีอีเมล @msu.ac.th และผู้ดูแลใหม่จะเข้าสู่ระบบด้วย Google OAuth</small>
+            {adminMessage && <p className="admin-success" role="status">{adminMessage}</p>}
+          </form> : <p className="admin-readonly">บัญชีนี้ดูรายชื่อผู้ดูแลได้ แต่ไม่มีสิทธิ์เพิ่มบัญชีใหม่</p>}
+        </div>
       </section>
 
       <section className="panel machine-panel">

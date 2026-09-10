@@ -10,6 +10,22 @@ export type Session = {
   endedAt?: string;
 };
 
+export type AdminRecord = {
+  email: string;
+  role: 'admin';
+  status: 'Active';
+  addedBy: string;
+  addedAt: string;
+};
+
+export type AdminView = {
+  email: string;
+  role: 'root' | 'admin';
+  status: 'Active';
+  addedBy?: string;
+  addedAt?: string;
+};
+
 export type OAuthConfig = {
   authorizationUrl: string;
   tokenUrl: string;
@@ -26,13 +42,14 @@ export type SheetsConfig = {
   credentialsFile: string;
   sessionsRange: string;
   eventsRange: string;
+  adminsRange?: string;
 };
 
 export type ServerConfig = {
   sessionHours: number;
   machineCount: number;
   machinePrefix: string;
-  adminEmails: string[];
+  rootAdminEmail: string;
   adminWebUrl: string;
   clientKey: string;
   authSecret: string;

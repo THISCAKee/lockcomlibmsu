@@ -3,6 +3,7 @@ import { getServerConfig } from './config';
 import { OneTimeClientCodeStore, ClientTokenStore } from './client-tokens';
 import { PresenceRegistry } from './presence-registry';
 import { SessionManager, type Clock } from './session-manager';
+import { AdminRegistry } from './admin-registry';
 import type { ServerConfig } from './types';
 
 export type RuntimeState = {
@@ -10,6 +11,7 @@ export type RuntimeState = {
   store: SheetStore;
   clock: Clock;
   sessions: SessionManager;
+  admins: AdminRegistry;
   presence: PresenceRegistry;
   clientCodes: OneTimeClientCodeStore;
   clientTokens: ClientTokenStore;
@@ -32,11 +34,14 @@ async function initializeRuntime(): Promise<RuntimeState> {
   const store = createSheetStore(config);
   const sessions = new SessionManager(clock, config.sessionHours * 60 * 60 * 1000);
   sessions.restore(await store.loadSessions());
+  const admins = new AdminRegistry(config.rootAdminEmail, config.oauth.allowedEmailDomain, clock);
+  admins.restore(await store.loadAdmins());
   return {
     config,
     store,
     clock,
     sessions,
+    admins,
     presence: new PresenceRegistry(clock),
     clientCodes: new OneTimeClientCodeStore(clock),
     clientTokens: new ClientTokenStore(clock),

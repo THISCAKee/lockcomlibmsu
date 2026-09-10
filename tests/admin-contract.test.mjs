@@ -44,10 +44,13 @@ test('Next.js server modules expose the shared configuration boundary', () => {
 test('Next.js server modules expose the Google Sheets store boundary', () => {
   const store = read('./lib/server/store.ts');
   const googleSheets = read('./lib/server/google-sheets.ts');
+  const admins = read('./lib/server/admin-registry.ts');
   assert.match(store, /InMemorySheetStore/);
   assert.match(store, /GoogleSheetsStore/);
   assert.match(googleSheets, /sessionsRange/);
   assert.match(googleSheets, /eventsRange/);
+  assert.match(googleSheets, /adminsRange/);
+  assert.match(admins, /AdminRegistry/);
 });
 
 test('Next.js exposes the full LockComputer Route Handler surface', () => {
@@ -66,6 +69,14 @@ test('Next.js exposes the full LockComputer Route Handler surface', () => {
     './app/api/admin/machines/[machineId]/shutdown/route.ts',
     './app/api/admin/reports/monthly/route.ts',
     './app/api/admin/export/monthly.csv/route.ts',
+    './app/api/admin/admins/route.ts',
   ];
   for (const route of routes) assert.doesNotThrow(() => read(route));
+});
+
+test('Admin dashboard exposes root-only Admin management', () => {
+  const page = read('./app/page.tsx');
+  assert.match(page, /\/api\/admin\/admins/);
+  assert.match(page, /canManage/);
+  assert.match(page, /เพิ่มผู้ดูแล|Add Admin/);
 });

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 process.env.LOCKCOMPUTER_CLIENT_KEY = 'test-client-key';
-process.env.LOCKCOMPUTER_ADMIN_EMAILS = 'admin@msu.ac.th';
+process.env.LOCKCOMPUTER_ROOT_ADMIN_EMAIL = 'khunanon.m@msu.ac.th';
 process.env.OAUTH_CLIENT_SECRET = 'test-oauth-secret';
 
 const jsonRequest = (url: string, body?: unknown, headers?: Record<string, string>) => new Request(`http://localhost${url}`, {
@@ -14,7 +14,7 @@ const jsonRequest = (url: string, body?: unknown, headers?: Record<string, strin
 const adminCookie = async () => {
   const { signAdminCookie } = await import('../lib/server/auth-session');
   const { getServerConfig } = await import('../lib/server/config');
-  return signAdminCookie('admin@msu.ac.th', new Date(Date.now() + 60_000), getServerConfig().authSecret);
+  return signAdminCookie('khunanon.m@msu.ac.th', new Date(Date.now() + 60_000), getServerConfig().authSecret);
 };
 
 test('health returns the configured store name', async () => {
@@ -120,4 +120,37 @@ test('OAuth login returns a redirect with both state cookies', async () => {
   const cookies = response.headers.getSetCookie?.().join('\n') ?? response.headers.get('set-cookie') ?? '';
   assert.match(cookies, /lockcomputer_oauth_state=/);
   assert.match(cookies, /lockcomputer_oauth_return=/);
+});
+
+test('only the root Admin can add Admin accounts', async () => {
+  const { GET, POST } = await import('../app/api/admin/admins/route');
+  const rootCookie = `lockcomputer_admin=${await adminCookie()}`;
+  const created = await POST(jsonRequest('/api/admin/admins', { email: 'staff@msu.ac.th' }, { cookie: rootCookie }));
+  assert.equal(created.status, 201);
+  assert.equal((await created.json()).email, 'staff@msu.ac.th');
+
+  const state = await (await import('../lib/server/runtime')).runtime();
+  const staffCookie = (await import('../lib/server/auth-session')).signAdminCookie('staff@msu.ac.th', new Date(Date.now() + 60_000), state.config.authSecret);
+  const denied = await POST(jsonRequest('/api/admin/admins', { email: 'second@msu.ac.th' }, { cookie: `lockcomputer_admin=${staffCookie}` }));
+  assert.equal(denied.status, 403);
+  const list = await GET(new Request('http://localhost/api/admin/admins', { headers: { cookie: rootCookie } }));
+  assert.equal(list.status, 200);
+  assert.equal((await list.json()).canManage, true);
+});
+
+test('Admin OAuth rejects an MSU account that is not in the Admin registry', async () => {
+  const { GET } = await import('../app/auth/callback/route');
+  const { getServerConfig } = await import('../lib/server/config');
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async (input) => String(input) === getServerConfig().oauth.tokenUrl
+    ? Response.json({ access_token: 'test-access-token' })
+    : Response.json({ email: 'not-admin@msu.ac.th' });
+  try {
+    const response = await GET(new Request('http://localhost:3000/auth/callback?state=test-state&code=test-code', {
+      headers: { cookie: 'lockcomputer_oauth_state=test-state; lockcomputer_oauth_return=%2Fadmin' },
+    }));
+    assert.equal(response.status, 403);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });

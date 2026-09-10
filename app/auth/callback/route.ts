@@ -30,6 +30,7 @@ export async function GET(request: Request) {
     }
 
     if (returnUrl === '/admin') {
+      if (!state.admins.isAdmin(email)) return clearAuthCookies(jsonError('This account is not an Admin.', 403));
       const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000);
       const response = redirectResponse(`${state.config.adminWebUrl.replace(/\/$/, '')}/admin`);
       response.headers.append('set-cookie', setCookie('lockcomputer_admin', signAdminCookie(email, expiresAt, state.config.authSecret), { maxAge: 12 * 60 * 60, secure }));

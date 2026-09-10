@@ -19,6 +19,35 @@ test('in-memory store restores valid session rows and ignores invalid rows', asy
   assert.equal(sessions[0].id, 'session-1');
 });
 
+test('in-memory store restores and appends Admin rows', async () => {
+  const store = new InMemorySheetStore([], [], [['staff@msu.ac.th', 'admin', 'Active', 'khunanon.m@msu.ac.th', '2026-09-10T08:00:00.000Z']]);
+  const admins = await store.loadAdmins();
+  assert.equal(admins[0].email, 'staff@msu.ac.th');
+  await store.appendAdmin(['second@msu.ac.th', 'admin', 'Active', 'khunanon.m@msu.ac.th', '2026-09-10T08:00:00.000Z']);
+  assert.equal(store.adminRows.length, 2);
+});
+
+test('Google Sheets store reads and appends Admin rows in Admins!A:E', async () => {
+  const calls: Request[] = [];
+  const store = new GoogleSheetsStore({
+    spreadsheetId: 'sheet-id',
+    credentialsFile: 'unused-in-test',
+    sessionsRange: 'Sessions!A:H',
+    eventsRange: 'Events!A:F',
+  }, async (input, init) => {
+    const request = new Request(input, init);
+    calls.push(request);
+    if (request.url.endsWith('/token')) return Response.json({ access_token: 'test-token', expires_in: 3600 });
+    if (request.url.includes('Admins!A%3AE')) return Response.json({ values: [['staff@msu.ac.th', 'admin', 'Active', 'khunanon.m@msu.ac.th', '2026-09-10T08:00:00.000Z']] });
+    return new Response(null, { status: 200 });
+  }, testCredentials());
+  const admins = await store.loadAdmins();
+  assert.equal(admins[0].email, 'staff@msu.ac.th');
+  await store.appendAdmin(['second@msu.ac.th', 'admin', 'Active', 'khunanon.m@msu.ac.th', '2026-09-10T08:00:00.000Z']);
+  assert.equal(calls.filter(request => request.method === 'POST' && !request.url.endsWith('/token')).length, 1);
+  assert.match(calls.at(-1)?.url ?? '', /Admins!A%3AE:append/);
+});
+
 test('Google Sheets store loads Sessions!A:H with a bearer token', async () => {
   const calls: Request[] = [];
   const store = new GoogleSheetsStore({

@@ -31,10 +31,10 @@ export function isKnownMachine(machineId: string, config: Pick<ServerConfig, 'ma
 }
 
 export function getServerConfig(): ServerConfig {
-  const adminEmails = firstEnvironmentValue('LOCKCOMPUTER_ADMIN_EMAILS', 'LockComputer__AdminEmails__0')
-    .split(',')
-    .map(value => value.trim().toLowerCase())
-    .filter(Boolean);
+  const rootAdminEmail = firstEnvironmentValue('LOCKCOMPUTER_ROOT_ADMIN_EMAIL') || 'khunanon.m@msu.ac.th';
+  if (rootAdminEmail.toLowerCase() !== 'khunanon.m@msu.ac.th') {
+    throw new Error('LOCKCOMPUTER_ROOT_ADMIN_EMAIL must be khunanon.m@msu.ac.th.');
+  }
 
   const oauth: OAuthConfig = {
     authorizationUrl: firstEnvironmentValue('OAUTH_AUTHORIZATION_URL', 'OAuth__AuthorizationUrl') || 'https://accounts.google.com/o/oauth2/v2/auth',
@@ -52,13 +52,14 @@ export function getServerConfig(): ServerConfig {
     credentialsFile: requiredProductionValue(firstEnvironmentValue('GOOGLE_SHEETS_CREDENTIALS_FILE', 'GoogleSheets__CredentialsFile'), 'GOOGLE_SHEETS_CREDENTIALS_FILE'),
     sessionsRange: firstEnvironmentValue('GOOGLE_SHEETS_SESSIONS_RANGE', 'GoogleSheets__SessionsRange') || 'Sessions!A:H',
     eventsRange: firstEnvironmentValue('GOOGLE_SHEETS_EVENTS_RANGE', 'GoogleSheets__EventsRange') || 'Events!A:F',
+    adminsRange: firstEnvironmentValue('GOOGLE_SHEETS_ADMINS_RANGE', 'GoogleSheets__AdminsRange') || 'Admins!A:E',
   };
 
   const config: ServerConfig = {
     sessionHours: numberSetting('LOCKCOMPUTER_SESSION_HOURS', 3),
     machineCount: numberSetting('LOCKCOMPUTER_MACHINE_COUNT', 201),
     machinePrefix: firstEnvironmentValue('LOCKCOMPUTER_MACHINE_PREFIX') || 'PC-',
-    adminEmails,
+    rootAdminEmail,
     adminWebUrl: firstEnvironmentValue('LOCKCOMPUTER_ADMIN_WEB_URL', 'LockComputer__AdminWebUrl') || 'http://localhost:3000',
     clientKey: requiredProductionValue(firstEnvironmentValue('LOCKCOMPUTER_CLIENT_KEY', 'LockComputer__ClientKey') || 'local-development-client-key', 'LOCKCOMPUTER_CLIENT_KEY'),
     authSecret: requiredProductionValue(firstEnvironmentValue('LOCKCOMPUTER_AUTH_SECRET') || 'local-development-auth-secret', 'LOCKCOMPUTER_AUTH_SECRET'),
@@ -68,9 +69,6 @@ export function getServerConfig(): ServerConfig {
 
   if (config.machinePrefix !== 'PC-' || config.machineCount !== 201) {
     throw new Error('The LockComputer inventory must use machine IDs PC-001 through PC-201.');
-  }
-  if (process.env.NODE_ENV === 'production' && config.adminEmails.length === 0) {
-    throw new Error('Missing required production environment variable: LOCKCOMPUTER_ADMIN_EMAILS');
   }
   return config;
 }

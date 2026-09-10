@@ -14,7 +14,7 @@ export function cookieValue(request: Request, name: string) {
 
 export function adminEmail(request: Request, state: RuntimeState) {
   const payload = verifyAdminCookie(cookieValue(request, 'lockcomputer_admin'), state.config.authSecret);
-  return payload && state.config.adminEmails.includes(payload.email.toLowerCase()) ? payload.email : null;
+  return payload && state.admins.isAdmin(payload.email) ? payload.email : null;
 }
 
 export function clientEmail(request: Request, state: RuntimeState) {
