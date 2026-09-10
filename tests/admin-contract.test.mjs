@@ -33,3 +33,9 @@ test('Admin dashboard exposes remote shutdown controls for online machines', () 
   assert.match(page, /Shutdown|ปิดเครื่อง/);
   assert.match(styles, /button-shutdown/);
 });
+
+test('Next.js server modules expose the shared configuration boundary', () => {
+  const config = read('./lib/server/config.ts');
+  assert.match(config, /getServerConfig/);
+  assert.match(config, /isKnownMachine/);
+});
