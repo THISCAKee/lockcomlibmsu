@@ -13,10 +13,11 @@ test('Next.js admin page exposes machine, report and force-logout flows', () => 
   assert.match(page, /LockComputer Admin/);
 });
 
-test('Next.js proxies API and OAuth routes to the ASP.NET server', () => {
+test('Next.js owns the API and OAuth routes', () => {
   const config = read('./next.config.mjs');
-  assert.match(config, /destination.*\/api\/:path/);
-  assert.match(config, /destination.*\/auth\/:path/);
+  assert.doesNotMatch(config, /rewrites/);
+  assert.match(read('./app/api/health/route.ts'), /getRuntime/);
+  assert.match(read('./app/auth/login/route.ts'), /createAuthorizationUrl/);
 });
 
 test('Admin dashboard is available at the /admin route', () => {
