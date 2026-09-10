@@ -111,3 +111,13 @@ test('monthly report JSON and CSV require Admin authorization', async () => {
   assert.equal(csvResponse.status, 200);
   assert.match(await csvResponse.text(), /month,user_email,machine_id,session_count,hours/);
 });
+
+test('OAuth login returns a redirect with both state cookies', async () => {
+  const { GET } = await import('../app/auth/login/route');
+  const response = await GET(new Request('http://localhost:3000/auth/login?returnUrl=/admin'));
+  assert.equal(response.status, 302);
+  assert.match(response.headers.get('location') ?? '', /client_id=/);
+  const cookies = response.headers.getSetCookie?.().join('\n') ?? response.headers.get('set-cookie') ?? '';
+  assert.match(cookies, /lockcomputer_oauth_state=/);
+  assert.match(cookies, /lockcomputer_oauth_return=/);
+});

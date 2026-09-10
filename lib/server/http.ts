@@ -7,3 +7,7 @@ export function setCookie(name: string, value: string, options: { maxAge: number
 export function clearCookie(name: string, secure: boolean) {
   return setCookie(name, '', { maxAge: 0, secure });
 }
+
+export function redirectResponse(location: string, status = 302) {
+  return new Response(null, { status, headers: { location } });
+}

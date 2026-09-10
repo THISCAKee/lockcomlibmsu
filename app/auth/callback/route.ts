@@ -1,7 +1,7 @@
 import { runtime as getRuntime } from '../../../lib/server/runtime';
 import { exchangeCodeForEmail, isAllowedEmail } from '../../../lib/server/oauth';
 import { signAdminCookie } from '../../../lib/server/auth-session';
-import { clearCookie, setCookie } from '../../../lib/server/http';
+import { clearCookie, redirectResponse, setCookie } from '../../../lib/server/http';
 import { cookieValue, jsonError } from '../../../lib/server/route-auth';
 
 export const runtime = 'nodejs';
@@ -31,13 +31,13 @@ export async function GET(request: Request) {
 
     if (returnUrl === '/admin') {
       const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000);
-      const response = Response.redirect(`${state.config.adminWebUrl.replace(/\/$/, '')}/admin`, 302);
+      const response = redirectResponse(`${state.config.adminWebUrl.replace(/\/$/, '')}/admin`);
       response.headers.append('set-cookie', setCookie('lockcomputer_admin', signAdminCookie(email, expiresAt, state.config.authSecret), { maxAge: 12 * 60 * 60, secure }));
       return clearAuthCookies(response);
     }
 
     const clientCode = state.clientCodes.issue(email);
-    const response = Response.redirect(`lockcomputer://login?code=${encodeURIComponent(clientCode)}`, 302);
+    const response = redirectResponse(`lockcomputer://login?code=${encodeURIComponent(clientCode)}`);
     return clearAuthCookies(response);
   } catch (error) {
     const message = error instanceof Error ? error.message : 'OAuth sign-in failed.';
