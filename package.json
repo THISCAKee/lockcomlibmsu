@@ -6,7 +6,7 @@
     "dev": "next dev -p 3000",
     "dev:admin": "next dev -p 3000",
     "build": "next build",
-    "start": "next start -p 3000",
+    "start": "next start",
     "test": "node tests/admin-contract.test.mjs && node tests/machine-filter.test.mjs && npm run test:server",
     "test:server": "tsx --test tests/server-config.test.ts tests/session-manager.test.ts tests/presence-registry.test.ts tests/monthly-report.test.ts tests/google-sheets.test.ts tests/oauth.test.ts tests/auth-session.test.ts tests/client-tokens.test.ts tests/routes-contract.test.ts"
   },
