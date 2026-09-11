@@ -1,4 +1,5 @@
 import { runtime as getRuntime } from '../../../lib/server/runtime';
+import { zoneForMachine } from '../../../lib/server/zones';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -13,6 +14,7 @@ export async function GET() {
     return {
       machineId,
       name: machineId,
+      zone: zoneForMachine(machineId) ?? 'ไม่ระบุ',
       status: session ? 'InUse' : 'Available',
       userEmail: session?.userEmail,
       expiresAt: session?.expiresAt,

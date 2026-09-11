@@ -39,7 +39,10 @@ test('machines returns 203 inventory with online and lastSeenAt', async () => {
   const machines = await response.json();
   assert.equal(machines.length, 203);
   assert.equal(machines[0].machineId, 'PC-001');
+  assert.equal(machines[0].zone, 'A-407');
+  assert.equal(machines[50].zone, 'A-412');
   assert.equal(machines[202].machineId, 'PC-203');
+  assert.equal(machines[202].zone, 'ศูนย์อีสาน');
   assert.equal(machines[0].online, true);
   assert.equal(typeof machines[0].lastSeenAt, 'string');
 });

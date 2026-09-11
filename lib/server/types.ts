@@ -60,6 +60,7 @@ export type ServerConfig = {
 export type MachineView = {
   machineId: string;
   name: string;
+  zone: string;
   status: 'Available' | 'InUse';
   userEmail?: string;
   expiresAt?: string;
