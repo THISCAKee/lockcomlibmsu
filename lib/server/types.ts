@@ -96,8 +96,16 @@ export type ClientPollView = {
 
 export type MonthlyReportRow = {
   key: string;
+  zone: string;
   userEmail?: string;
   machineId?: string;
+  sessionCount: number;
+  hours: number;
+};
+
+export type MonthlyZoneReportRow = {
+  zone: string;
+  machineCount: number;
   sessionCount: number;
   hours: number;
 };
@@ -105,5 +113,6 @@ export type MonthlyReportRow = {
 export type MonthlyReportView = {
   month: string;
   rows: MonthlyReportRow[];
+  zoneRows: MonthlyZoneReportRow[];
   totalHours: number;
 };
