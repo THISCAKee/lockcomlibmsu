@@ -99,7 +99,8 @@ button, a { -webkit-tap-highlight-color: transparent; }
 .filter-tabs button.active { color: #fff; background: var(--navy-800); box-shadow: 0 3px 9px rgba(18,61,93,.18); }
 .filter-tabs button.active span { color: var(--navy-800); background: #fff; }
 .zone-select { display: flex; align-items: center; gap: 8px; flex: 0 0 auto; color: #70838e; font-size: .72rem; font-weight: 650; }
-.zone-select select { min-height: 41px; padding: 0 30px 0 11px; border: 1px solid #d7e2e7; border-radius: 11px; outline: 0; color: var(--ink); background: #fff; font-size: .76rem; cursor: pointer; }
+.zone-select select { min-height: 41px; padding: 0 30px 0 11px; border: 1px solid #d7e2e7; border-radius: 11px; outline: 0; color: var(--ink); background: #fff; font-family: var(--font-anuphan), sans-serif; font-size: .76rem; cursor: pointer; }
+.zone-select option { font-family: var(--font-anuphan), sans-serif; }
 .zone-select select:focus { border-color: #63aebc; box-shadow: 0 0 0 3px rgba(18,169,181,.11); }
 
 .machine-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(216px, 1fr)); gap: 12px; padding: 20px 28px 28px; }
