@@ -2,10 +2,12 @@
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { filterMachines, type MachineStatusFilter } from '../lib/machines';
+import { MACHINE_ZONES, machineCountForZone } from '../lib/server/zones';
 
 type Machine = {
   machineId: string;
   name: string;
+  zone: string;
   status: 'Available' | 'InUse';
   userEmail?: string;
   expiresAt?: string;
@@ -14,8 +16,9 @@ type Machine = {
   lastSeenAt?: string;
 };
 
-type ReportRow = { userEmail?: string; machineId?: string; sessionCount: number; hours: number };
-type Report = { totalHours: number; rows: ReportRow[] };
+type ReportRow = { zone: string; userEmail?: string; machineId?: string; sessionCount: number; hours: number };
+type ZoneReportRow = { zone: string; machineCount: number; sessionCount: number; hours: number };
+type Report = { totalHours: number; rows: ReportRow[]; zoneRows: ZoneReportRow[] };
 type Admin = { email: string; role: 'root' | 'admin'; status: 'Active'; addedBy?: string; addedAt?: string };
 
 const monthQuery = () => {
@@ -45,13 +48,14 @@ function PowerIcon() {
 
 export default function AdminPage() {
   const [machines, setMachines] = useState<Machine[]>([]);
-  const [report, setReport] = useState<Report>({ totalHours: 0, rows: [] });
+  const [report, setReport] = useState<Report>({ totalHours: 0, rows: [], zoneRows: [] });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
   const [acting, setActing] = useState('');
   const [query, setQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<MachineStatusFilter>('all');
+  const [zoneFilter, setZoneFilter] = useState('all');
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null);
   const [admins, setAdmins] = useState<Admin[]>([]);
   const [canManageAdmins, setCanManageAdmins] = useState(false);
@@ -154,8 +158,8 @@ export default function AdminPage() {
   const available = machines.length - used;
   const utilization = machines.length ? Math.round((used / machines.length) * 100) : 0;
   const visibleMachines = useMemo(
-    () => filterMachines(machines, query, statusFilter),
-    [machines, query, statusFilter],
+    () => filterMachines(machines, query, statusFilter).filter(machine => zoneFilter === 'all' || machine.zone === zoneFilter),
+    [machines, query, statusFilter, zoneFilter],
   );
   const { year, month } = monthQuery();
   const monthName = new Intl.DateTimeFormat('th-TH', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1));
@@ -232,6 +236,7 @@ export default function AdminPage() {
 
         <div className="toolbar">
           <label className="search-box"><SearchIcon /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="ค้นหาหมายเลขเครื่องหรืออีเมลผู้ใช้" aria-label="ค้นหาเครื่อง" />{query && <button onClick={() => setQuery('')} aria-label="ล้างคำค้นหา">×</button>}</label>
+          <label className="zone-select"><span>โซน</span><select value={zoneFilter} onChange={event => setZoneFilter(event.target.value)} aria-label="กรองตามโซน"><option value="all">ทุกโซน</option>{MACHINE_ZONES.map(zone => <option key={zone.name} value={zone.name}>{zone.name} · {machineCountForZone(zone.name)} เครื่อง</option>)}</select></label>
           <div className="filter-tabs" role="group" aria-label="กรองสถานะเครื่อง">
             {([
               ['all', 'ทั้งหมด', machines.length],
@@ -246,7 +251,7 @@ export default function AdminPage() {
             const inUse = machine.status === 'InUse';
             return <article key={machine.machineId} className={`machine-card ${inUse ? 'is-active' : 'is-available'}`}>
               <div className="machine-top"><span className="computer-icon"><i /></span><div className="machine-badges"><span className={`connection-badge ${machine.online ? 'is-online' : 'is-offline'}`}><i />{machine.online ? 'ออนไลน์' : 'ออฟไลน์'}</span><span className="status-badge"><i />{inUse ? 'กำลังใช้งาน' : 'ว่าง'}</span></div></div>
-              <div className="machine-name"><h3>{machine.name}</h3><span>{machine.machineId}</span></div>
+              <div className="machine-name"><h3>{machine.name}</h3><span className="machine-zone-label">{machine.zone}</span><span>{machine.machineId}</span></div>
               {inUse ? <div className="session-detail">
                 <p><span>ผู้ใช้งาน</span><strong title={machine.userEmail}>{machine.userEmail}</strong></p>
                 <p><span>หมดเวลา</span><strong>{formatTime(machine.expiresAt)} น.</strong></p>
@@ -254,7 +259,7 @@ export default function AdminPage() {
               </div> : <div className="available-copy"><span>พร้อมใช้งาน</span><p>ยังไม่มีผู้ใช้เครื่องนี้</p><div className="machine-actions"><button className="button button-shutdown" disabled={!machine.online || acting === `shutdown:${machine.machineId}`} title={machine.online ? 'สั่งปิดเครื่อง' : 'เครื่องออฟไลน์'} onClick={() => shutdownMachine(machine.machineId)}><PowerIcon />{acting === `shutdown:${machine.machineId}` ? 'กำลังส่งคำสั่ง...' : 'ปิดเครื่อง'}</button></div></div>}
             </article>;
           })}
-        </div> : <div className="empty-state"><SearchIcon /><h3>ไม่พบเครื่องที่ค้นหา</h3><p>ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะ</p><button className="button button-ghost" onClick={() => { setQuery(''); setStatusFilter('all'); }}>ล้างตัวกรอง</button></div>}
+        </div> : <div className="empty-state"><SearchIcon /><h3>ไม่พบเครื่องที่ค้นหา</h3><p>ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะหรือโซน</p><button className="button button-ghost" onClick={() => { setQuery(''); setStatusFilter('all'); setZoneFilter('all'); }}>ล้างตัวกรอง</button></div>}
       </section>
 
       <section className="panel report-panel">
@@ -262,7 +267,13 @@ export default function AdminPage() {
           <div><p className="section-kicker">MONTHLY REPORT</p><h2>รายงานประจำเดือน{monthName}</h2><p>ชั่วโมงใช้งานรวม <strong>{report.totalHours.toLocaleString('th-TH')}</strong> ชั่วโมง</p></div>
           <a className="button button-primary" href={`/api/admin/export/monthly.csv?year=${year}&month=${month}`}><DownloadIcon />ดาวน์โหลด CSV</a>
         </div>
-        {report.rows.length === 0 ? <div className="empty-report"><span>—</span><p>ยังไม่มีข้อมูลการใช้งานในเดือนนี้</p></div> : <div className="table-wrap"><table><thead><tr><th>ผู้ใช้งาน</th><th>หมายเลขเครื่อง</th><th>จำนวนเซสชัน</th><th>ชั่วโมงใช้งาน</th></tr></thead><tbody>{report.rows.map(row => <tr key={`${row.userEmail}-${row.machineId}`}><td><strong>{row.userEmail}</strong></td><td><span className="table-machine">{row.machineId}</span></td><td>{row.sessionCount.toLocaleString('th-TH')}</td><td>{row.hours.toLocaleString('th-TH')}</td></tr>)}</tbody></table></div>}
+        <div className="zone-report-grid">
+          {report.zoneRows.map(row => <article className="zone-report-card" key={row.zone}>
+            <div className="zone-report-heading"><span className="zone-dot" /><strong>{row.zone}</strong><span>{row.machineCount} เครื่อง</span></div>
+            <div className="zone-report-stats"><span><strong>{row.sessionCount.toLocaleString('th-TH')}</strong> เซสชัน</span><span><strong>{row.hours.toLocaleString('th-TH')}</strong> ชม.</span></div>
+          </article>)}
+        </div>
+        {report.rows.length === 0 ? <div className="empty-report"><span>—</span><p>ยังไม่มีข้อมูลการใช้งานในเดือนนี้</p></div> : <div className="table-wrap"><table><thead><tr><th>โซน</th><th>ผู้ใช้งาน</th><th>หมายเลขเครื่อง</th><th>จำนวนเซสชัน</th><th>ชั่วโมงใช้งาน</th></tr></thead><tbody>{report.rows.map(row => <tr key={`${row.userEmail}-${row.machineId}`}><td><span className="table-zone">{row.zone}</span></td><td><strong>{row.userEmail}</strong></td><td><span className="table-machine">{row.machineId}</span></td><td>{row.sessionCount.toLocaleString('th-TH')}</td><td>{row.hours.toLocaleString('th-TH')}</td></tr>)}</tbody></table></div>}
       </section>
 
       <footer><span>LockComputer Administration</span><span>มหาวิทยาลัยมหาสารคาม</span></footer>

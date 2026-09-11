@@ -10,6 +10,18 @@ test('monthly reports expose zone fields', () => {
   assert.match(read('./app/api/admin/export/monthly.csv/route.ts'), /zone/);
 });
 
+test('Admin dashboard exposes zone filtering and summaries', () => {
+  const page = read('./app/page.tsx');
+  const zones = read('./lib/server/zones.ts');
+  assert.match(page, /MACHINE_ZONES/);
+  assert.match(page, /zoneFilter/);
+  assert.match(page, /zoneRows/);
+  assert.match(page, /machine\.zone === zoneFilter/);
+  for (const zone of ['A-407', 'A-412', 'A-410', 'ชั้น-3', 'DLP', 'ศูนย์อีสาน']) {
+    assert.match(zones, new RegExp(zone));
+  }
+});
+
 test('Next.js admin page exposes machine, report and force-logout flows', () => {
   const page = read('./app/page.tsx');
   for (const endpoint of ['/api/me', '/api/machines', '/api/admin/reports/monthly', '/api/admin/export/monthly.csv', '/api/admin/sessions/']) {
