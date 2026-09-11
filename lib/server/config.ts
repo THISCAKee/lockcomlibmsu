@@ -57,7 +57,7 @@ export function getServerConfig(): ServerConfig {
 
   const config: ServerConfig = {
     sessionHours: numberSetting('LOCKCOMPUTER_SESSION_HOURS', 3),
-    machineCount: numberSetting('LOCKCOMPUTER_MACHINE_COUNT', 201),
+    machineCount: numberSetting('LOCKCOMPUTER_MACHINE_COUNT', 203),
     machinePrefix: firstEnvironmentValue('LOCKCOMPUTER_MACHINE_PREFIX') || 'PC-',
     rootAdminEmail,
     adminWebUrl: firstEnvironmentValue('LOCKCOMPUTER_ADMIN_WEB_URL', 'LockComputer__AdminWebUrl') || 'http://localhost:3000',
@@ -67,8 +67,8 @@ export function getServerConfig(): ServerConfig {
     sheets,
   };
 
-  if (config.machinePrefix !== 'PC-' || config.machineCount !== 201) {
-    throw new Error('The LockComputer inventory must use machine IDs PC-001 through PC-201.');
+  if (config.machinePrefix !== 'PC-' || config.machineCount !== 203) {
+    throw new Error('The LockComputer inventory must use machine IDs PC-001 through PC-203.');
   }
   return config;
 }

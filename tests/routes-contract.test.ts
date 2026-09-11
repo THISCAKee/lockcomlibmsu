@@ -33,12 +33,13 @@ test('client poll requires both machine headers and consumes one command', async
   assert.deepEqual(await valid.json(), { online: true, command: null });
 });
 
-test('machines returns 201 inventory with online and lastSeenAt', async () => {
+test('machines returns 203 inventory with online and lastSeenAt', async () => {
   const { GET } = await import('../app/api/machines/route');
   const response = await GET();
   const machines = await response.json();
-  assert.equal(machines.length, 201);
+  assert.equal(machines.length, 203);
   assert.equal(machines[0].machineId, 'PC-001');
+  assert.equal(machines[202].machineId, 'PC-203');
   assert.equal(machines[0].online, true);
   assert.equal(typeof machines[0].lastSeenAt, 'string');
 });

@@ -184,7 +184,7 @@ export default function AdminPage() {
       <div className="hero-copy">
         <p className="overline">ADMIN CONTROL CENTER</p>
         <h1>ภาพรวมการใช้งานห้องคอมพิวเตอร์</h1>
-        <p>ติดตามสถานะเครื่องทั้ง 201 เครื่องและจัดการเซสชันแบบเรียลไทม์ในที่เดียว</p>
+        <p>ติดตามสถานะเครื่องทั้ง 203 เครื่องและจัดการเซสชันแบบเรียลไทม์ในที่เดียว</p>
         <div className="updated">อัปเดตอัตโนมัติทุก 15 วินาที · ล่าสุด {lastUpdated?.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) ?? '-'}</div>
       </div>
     </header>
