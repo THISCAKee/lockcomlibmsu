@@ -3,7 +3,7 @@ import type { Clock } from './session-manager';
 
 export type RemoteCommand = {
   id: string;
-  type: 'shutdown';
+  type: 'shutdown' | 'close';
   requestedAt: string;
 };
 
@@ -44,17 +44,33 @@ export class PresenceRegistry {
     return { online, lastSeenAt: new Date(entry.lastSeenAt).toISOString() };
   }
 
-  canQueueShutdown(machineId: string) {
+  private canQueueCommand(machineId: string) {
     const entry = this.entries.get(machineId.trim().toLowerCase());
     return Boolean(entry && this.getSnapshot(machineId).online && !entry.pending);
   }
 
-  tryQueueShutdown(machineId: string, commandId = randomUUID().replaceAll('-', '')): RemoteCommand | null {
-    if (!this.canQueueShutdown(machineId)) return null;
+  canQueueShutdown(machineId: string) {
+    return this.canQueueCommand(machineId);
+  }
+
+  canQueueClose(machineId: string) {
+    return this.canQueueCommand(machineId);
+  }
+
+  private tryQueueCommand(machineId: string, type: RemoteCommand['type'], commandId = randomUUID().replaceAll('-', '')): RemoteCommand | null {
+    if (!this.canQueueCommand(machineId)) return null;
     const key = machineId.trim().toLowerCase();
     const entry = this.entries.get(key)!;
-    const command: RemoteCommand = { id: commandId, type: 'shutdown', requestedAt: this.clock.now().toISOString() };
+    const command: RemoteCommand = { id: commandId, type, requestedAt: this.clock.now().toISOString() };
     entry.pending = command;
     return command;
+  }
+
+  tryQueueShutdown(machineId: string, commandId?: string): RemoteCommand | null {
+    return this.tryQueueCommand(machineId, 'shutdown', commandId);
+  }
+
+  tryQueueClose(machineId: string, commandId?: string): RemoteCommand | null {
+    return this.tryQueueCommand(machineId, 'close', commandId);
   }
 }

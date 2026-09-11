@@ -16,15 +16,7 @@ type Machine = {
   lastSeenAt?: string;
 };
 
-type ReportRow = { zone: string; userEmail?: string; machineId?: string; sessionCount: number; hours: number };
-type ZoneReportRow = { zone: string; machineCount: number; sessionCount: number; hours: number };
-type Report = { totalHours: number; rows: ReportRow[]; zoneRows: ZoneReportRow[] };
 type Admin = { email: string; role: 'root' | 'admin'; status: 'Active'; addedBy?: string; addedAt?: string };
-
-const monthQuery = () => {
-  const now = new Date();
-  return { year: now.getFullYear(), month: now.getMonth() + 1 };
-};
 
 const formatTime = (value?: string) => value
   ? new Date(value).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
@@ -38,17 +30,16 @@ function SearchIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7" /><path d="m20 20-4-4" /></svg>;
 }
 
-function DownloadIcon() {
-  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12m0 0 5-5m-5 5-5-5M5 20h14" /></svg>;
-}
-
 function PowerIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v8m-4.95-5A8 8 0 1 0 16.95 6" /></svg>;
 }
 
+function CloseIcon() {
+  return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="m6 6 12 12M18 6 6 18" /></svg>;
+}
+
 export default function AdminPage() {
   const [machines, setMachines] = useState<Machine[]>([]);
-  const [report, setReport] = useState<Report>({ totalHours: 0, rows: [], zoneRows: [] });
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [error, setError] = useState('');
@@ -73,16 +64,13 @@ export default function AdminPage() {
         return;
       }
 
-      const { year, month } = monthQuery();
-      const [machineResponse, reportResponse, adminsResponse] = await Promise.all([
+      const [machineResponse, adminsResponse] = await Promise.all([
         fetch('/api/machines'),
-        fetch(`/api/admin/reports/monthly?year=${year}&month=${month}`),
         fetch('/api/admin/admins'),
       ]);
-      if (!machineResponse.ok || !reportResponse.ok || !adminsResponse.ok) throw new Error('โหลดข้อมูลแดชบอร์ดไม่สำเร็จ');
+      if (!machineResponse.ok || !adminsResponse.ok) throw new Error('โหลดข้อมูลแดชบอร์ดไม่สำเร็จ');
 
       setMachines(await machineResponse.json());
-      setReport(await reportResponse.json());
       const adminResult = await adminsResponse.json() as { admins: Admin[]; canManage: boolean };
       setAdmins(adminResult.admins);
       setCanManageAdmins(adminResult.canManage);
@@ -131,6 +119,24 @@ export default function AdminPage() {
     }
   };
 
+  const closeMachine = async (machineId: string) => {
+    if (!window.confirm(`ยืนยันการปิดโปรแกรม LockComputer ของ ${machineId} หรือไม่?`)) return;
+    setActing(`close:${machineId}`);
+    setError('');
+    try {
+      const response = await fetch(`/api/admin/machines/${machineId}/close`, { method: 'POST' });
+      if (!response.ok) {
+        const body = await response.json().catch(() => null) as { error?: string } | null;
+        throw new Error(body?.error ?? 'ไม่สามารถสั่งปิดโปรแกรมได้');
+      }
+      await load(true);
+    } catch (reason) {
+      setError(reason instanceof Error ? reason.message : 'ไม่สามารถสั่งปิดโปรแกรมได้');
+    } finally {
+      setActing('');
+    }
+  };
+
   const addAdmin = async (event: FormEvent) => {
     event.preventDefault();
     setAdminSaving(true);
@@ -161,8 +167,6 @@ export default function AdminPage() {
     () => filterMachines(machines, query, statusFilter).filter(machine => zoneFilter === 'all' || machine.zone === zoneFilter),
     [machines, query, statusFilter, zoneFilter],
   );
-  const { year, month } = monthQuery();
-  const monthName = new Intl.DateTimeFormat('th-TH', { month: 'long', year: 'numeric' }).format(new Date(year, month - 1));
 
   if (loading) {
     return <main className="dashboard loading-screen">
@@ -180,6 +184,7 @@ export default function AdminPage() {
         </div>
         <div className="nav-actions">
           <span className="live-badge"><i /> ระบบออนไลน์</span>
+          <a className="button button-ghost usage-nav-link" href="/admin/usage">ข้อมูลการเข้าใช้งาน</a>
           <button className="button button-ghost" onClick={() => load(true).catch(reason => setError(reason instanceof Error ? reason.message : 'รีเฟรชไม่สำเร็จ'))} disabled={refreshing}>
             <RefreshIcon />{refreshing ? 'กำลังรีเฟรช' : 'รีเฟรช'}
           </button>
@@ -188,7 +193,7 @@ export default function AdminPage() {
       <div className="hero-copy">
         <p className="overline">ADMIN CONTROL CENTER</p>
         <h1>ภาพรวมการใช้งานห้องคอมพิวเตอร์</h1>
-        <p>ติดตามสถานะเครื่องทั้ง 203 เครื่องและจัดการเซสชันแบบเรียลไทม์ในที่เดียว</p>
+        <p>ติดตามสถานะเครื่องทั้ง {machines.length} เครื่อง และจัดการเซสชันแบบเรียลไทม์ในที่เดียว</p>
         <div className="updated">อัปเดตอัตโนมัติทุก 15 วินาที · ล่าสุด {lastUpdated?.toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' }) ?? '-'}</div>
       </div>
     </header>
@@ -255,25 +260,11 @@ export default function AdminPage() {
               {inUse ? <div className="session-detail">
                 <p><span>ผู้ใช้งาน</span><strong title={machine.userEmail}>{machine.userEmail}</strong></p>
                 <p><span>หมดเวลา</span><strong>{formatTime(machine.expiresAt)} น.</strong></p>
-                <div className="machine-actions"><button className="button button-danger" disabled={!machine.sessionId || acting === machine.sessionId} onClick={() => forceLogout(machine.sessionId!)}>{acting === machine.sessionId ? 'กำลังดำเนินการ...' : 'บังคับออกจากระบบ'}</button><button className="button button-shutdown" disabled={!machine.online || acting === `shutdown:${machine.machineId}`} title={machine.online ? 'สั่งปิดเครื่อง' : 'เครื่องออฟไลน์'} onClick={() => shutdownMachine(machine.machineId)}><PowerIcon />{acting === `shutdown:${machine.machineId}` ? 'กำลังส่งคำสั่ง...' : 'ปิดเครื่อง'}</button></div>
-              </div> : <div className="available-copy"><span>พร้อมใช้งาน</span><p>ยังไม่มีผู้ใช้เครื่องนี้</p><div className="machine-actions"><button className="button button-shutdown" disabled={!machine.online || acting === `shutdown:${machine.machineId}`} title={machine.online ? 'สั่งปิดเครื่อง' : 'เครื่องออฟไลน์'} onClick={() => shutdownMachine(machine.machineId)}><PowerIcon />{acting === `shutdown:${machine.machineId}` ? 'กำลังส่งคำสั่ง...' : 'ปิดเครื่อง'}</button></div></div>}
+                <div className="machine-actions"><button className="button button-danger" disabled={!machine.sessionId || acting === machine.sessionId} onClick={() => forceLogout(machine.sessionId!)}>{acting === machine.sessionId ? 'กำลังดำเนินการ...' : 'บังคับออกจากระบบ'}</button><button className="button button-close" disabled={!machine.online || acting === `close:${machine.machineId}`} title={machine.online ? 'สั่งปิดโปรแกรม LockComputer' : 'เครื่องออฟไลน์'} onClick={() => closeMachine(machine.machineId)}><CloseIcon />{acting === `close:${machine.machineId}` ? 'กำลังส่งคำสั่ง...' : 'ปิดโปรแกรม'}</button><button className="button button-shutdown" disabled={!machine.online || acting === `shutdown:${machine.machineId}`} title={machine.online ? 'สั่งปิดเครื่อง Windows' : 'เครื่องออฟไลน์'} onClick={() => shutdownMachine(machine.machineId)}><PowerIcon />{acting === `shutdown:${machine.machineId}` ? 'กำลังส่งคำสั่ง...' : 'ปิดเครื่อง'}</button></div>
+              </div> : <div className="available-copy"><span>พร้อมใช้งาน</span><p>ยังไม่มีผู้ใช้เครื่องนี้</p><div className="machine-actions"><button className="button button-close" disabled={!machine.online || acting === `close:${machine.machineId}`} title={machine.online ? 'สั่งปิดโปรแกรม LockComputer' : 'เครื่องออฟไลน์'} onClick={() => closeMachine(machine.machineId)}><CloseIcon />{acting === `close:${machine.machineId}` ? 'กำลังส่งคำสั่ง...' : 'ปิดโปรแกรม'}</button><button className="button button-shutdown" disabled={!machine.online || acting === `shutdown:${machine.machineId}`} title={machine.online ? 'สั่งปิดเครื่อง Windows' : 'เครื่องออฟไลน์'} onClick={() => shutdownMachine(machine.machineId)}><PowerIcon />{acting === `shutdown:${machine.machineId}` ? 'กำลังส่งคำสั่ง...' : 'ปิดเครื่อง'}</button></div></div>}
             </article>;
           })}
         </div> : <div className="empty-state"><SearchIcon /><h3>ไม่พบเครื่องที่ค้นหา</h3><p>ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะหรือโซน</p><button className="button button-ghost" onClick={() => { setQuery(''); setStatusFilter('all'); setZoneFilter('all'); }}>ล้างตัวกรอง</button></div>}
-      </section>
-
-      <section className="panel report-panel">
-        <div className="panel-heading report-heading">
-          <div><p className="section-kicker">MONTHLY REPORT</p><h2>รายงานประจำเดือน{monthName}</h2><p>ชั่วโมงใช้งานรวม <strong>{report.totalHours.toLocaleString('th-TH')}</strong> ชั่วโมง</p></div>
-          <a className="button button-primary" href={`/api/admin/export/monthly.csv?year=${year}&month=${month}`}><DownloadIcon />ดาวน์โหลด CSV</a>
-        </div>
-        <div className="zone-report-grid">
-          {report.zoneRows.map(row => <article className="zone-report-card" key={row.zone}>
-            <div className="zone-report-heading"><span className="zone-dot" /><strong>{row.zone}</strong><span>{row.machineCount} เครื่อง</span></div>
-            <div className="zone-report-stats"><span><strong>{row.sessionCount.toLocaleString('th-TH')}</strong> เซสชัน</span><span><strong>{row.hours.toLocaleString('th-TH')}</strong> ชม.</span></div>
-          </article>)}
-        </div>
-        {report.rows.length === 0 ? <div className="empty-report"><span>—</span><p>ยังไม่มีข้อมูลการใช้งานในเดือนนี้</p></div> : <div className="table-wrap"><table><thead><tr><th>โซน</th><th>ผู้ใช้งาน</th><th>หมายเลขเครื่อง</th><th>จำนวนเซสชัน</th><th>ชั่วโมงใช้งาน</th></tr></thead><tbody>{report.rows.map(row => <tr key={`${row.userEmail}-${row.machineId}`}><td><span className="table-zone">{row.zone}</span></td><td><strong>{row.userEmail}</strong></td><td><span className="table-machine">{row.machineId}</span></td><td>{row.sessionCount.toLocaleString('th-TH')}</td><td>{row.hours.toLocaleString('th-TH')}</td></tr>)}</tbody></table></div>}
       </section>
 
       <footer><span>LockComputer Administration</span><span>มหาวิทยาลัยมหาสารคาม</span></footer>

@@ -15,5 +15,6 @@ export async function GET(request: Request) {
   const month = url.searchParams.get('month') ?? String(now.getUTCMonth() + 1);
   const selected = validMonth(`${year.padStart(4, '0')}-${month.padStart(2, '0')}`);
   if (!selected) return jsonError('Invalid year or month.', 400);
-  return Response.json(MonthlyReportBuilder.build(state.sessions.listSessions(), selected));
+  const sessions = await state.store.loadSessions();
+  return Response.json(MonthlyReportBuilder.build(sessions, selected));
 }

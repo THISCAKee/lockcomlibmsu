@@ -16,7 +16,8 @@ export async function GET(request: Request) {
   const selected = validMonth(`${year.padStart(4, '0')}-${month.padStart(2, '0')}`);
   if (!selected) return jsonError('Invalid year or month.', 400);
 
-  const report = MonthlyReportBuilder.build(state.sessions.listSessions(), selected);
+  const sessions = await state.store.loadSessions();
+  const report = MonthlyReportBuilder.build(sessions, selected);
   const rows = [
     'month,zone,user_email,machine_id,session_count,hours',
     ...report.rows.map(row => [selected, csvValue(row.zone), csvValue(row.userEmail ?? ''), csvValue(row.machineId ?? ''), row.sessionCount, row.hours].join(',')),

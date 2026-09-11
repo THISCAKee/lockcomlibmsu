@@ -14,7 +14,8 @@ export async function POST(request: Request) {
   const result = state.presence.poll(machineId);
   let command = null;
   if (result.command) {
-    await state.store.appendEvent([new Date().toISOString(), result.command.id, machineId, '', 'shutdown-dispatched', 'remote-admin']);
+    const eventType = result.command.type === 'close' ? 'close-dispatched' : 'shutdown-dispatched';
+    await state.store.appendEvent([new Date().toISOString(), result.command.id, machineId, '', eventType, 'remote-admin']);
     command = { id: result.command.id, type: result.command.type };
   }
   return Response.json({ online: result.online, command });

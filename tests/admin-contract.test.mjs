@@ -21,18 +21,20 @@ test('Admin dashboard exposes zone filtering and summaries', () => {
   const zones = read('./lib/server/zones.ts');
   assert.match(page, /MACHINE_ZONES/);
   assert.match(page, /zoneFilter/);
-  assert.match(page, /zoneRows/);
   assert.match(page, /machine\.zone === zoneFilter/);
   for (const zone of ['A-407', 'A-412', 'A-410', 'ชั้น-3', 'DLP', 'ศูนย์อีสาน']) {
     assert.match(zones, new RegExp(zone));
   }
 });
 
-test('Next.js admin page exposes machine, report and force-logout flows', () => {
+test('Next.js admin pages expose machine and usage report flows', () => {
   const page = read('./app/page.tsx');
-  for (const endpoint of ['/api/me', '/api/machines', '/api/admin/reports/monthly', '/api/admin/export/monthly.csv', '/api/admin/sessions/']) {
+  const usagePage = read('./app/admin/usage/page.tsx');
+  for (const endpoint of ['/api/me', '/api/machines', '/api/admin/sessions/']) {
     assert.match(page, new RegExp(endpoint.replaceAll('/', '\\/')));
   }
+  assert.match(usagePage, /\/api\/admin\/reports\/monthly/);
+  assert.match(usagePage, /\/api\/admin\/export\/monthly\.csv/);
   assert.match(page, /LockComputer Admin/);
 });
 
@@ -56,6 +58,32 @@ test('Admin dashboard exposes remote shutdown controls for online machines', () 
   assert.match(page, /window\.confirm/);
   assert.match(page, /Shutdown|ปิดเครื่อง/);
   assert.match(styles, /button-shutdown/);
+});
+
+test('Admin dashboard exposes a separate remote close-program control', () => {
+  const page = read('./app/page.tsx');
+  const styles = read('./app/globals.css');
+  assert.match(page, /closeMachine/);
+  assert.match(page, /\/api\/admin\/machines\/.*close/);
+  assert.match(page, /ปิดโปรแกรม/);
+  assert.match(styles, /button-close/);
+});
+
+test('usage statistics live on a dedicated count-based page', () => {
+  const usagePath = new URL('./app/admin/usage/page.tsx', root);
+  assert.equal(fs.existsSync(usagePath), true, 'usage statistics page must exist');
+  const usagePage = read('./app/admin/usage/page.tsx');
+  const dashboard = read('./app/page.tsx');
+  assert.match(usagePage, /ข้อมูลการเข้าใช้งาน/);
+  assert.match(usagePage, /\/api\/admin\/reports\/monthly/);
+  assert.match(usagePage, /type="month"/);
+  assert.match(usagePage, /usage-chart/);
+  assert.match(usagePage, /machine-ranking/);
+  assert.match(usagePage, /sessionCount/);
+  assert.doesNotMatch(usagePage, /hours|ชั่วโมงใช้งาน/);
+  assert.match(dashboard, /\/admin\/usage/);
+  assert.doesNotMatch(dashboard, /report-panel/);
+  assert.doesNotMatch(dashboard, /ชั่วโมงใช้งาน/);
 });
 
 test('Next.js server modules expose the shared configuration boundary', () => {
@@ -90,6 +118,7 @@ test('Next.js exposes the full LockComputer Route Handler surface', () => {
     './app/api/sessions/[id]/logout/route.ts',
     './app/api/admin/sessions/[id]/force-logout/route.ts',
     './app/api/admin/machines/[machineId]/shutdown/route.ts',
+    './app/api/admin/machines/[machineId]/close/route.ts',
     './app/api/admin/reports/monthly/route.ts',
     './app/api/admin/export/monthly.csv/route.ts',
     './app/api/admin/admins/route.ts',

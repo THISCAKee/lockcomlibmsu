@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 
 process.env.LOCKCOMPUTER_CLIENT_KEY = 'test-client-key';
 process.env.LOCKCOMPUTER_ROOT_ADMIN_EMAIL = 'khunanon.m@msu.ac.th';
@@ -103,6 +104,39 @@ test('admin shutdown force-logs out active sessions and appends request and disp
   assert.equal(events.includes('shutdown-dispatched'), true);
 });
 
+test('admin close rejects unauthenticated, unknown, and offline targets', async () => {
+  const routeUrl = new URL('../app/api/admin/machines/[machineId]/close/route.ts', import.meta.url);
+  assert.equal(fs.existsSync(routeUrl), true, 'close route must exist');
+  const { POST } = await import('../app/api/admin/machines/[machineId]/close/route');
+  const cookie = await adminCookie();
+  const unauthenticated = await POST(jsonRequest('/api/admin/machines/PC-006/close'), { params: Promise.resolve({ machineId: 'PC-006' }) });
+  assert.equal(unauthenticated.status, 403);
+  const unknown = await POST(jsonRequest('/api/admin/machines/PC-999/close', undefined, { cookie: `lockcomputer_admin=${cookie}` }), { params: Promise.resolve({ machineId: 'PC-999' }) });
+  assert.equal(unknown.status, 404);
+  const offline = await POST(jsonRequest('/api/admin/machines/PC-006/close', undefined, { cookie: `lockcomputer_admin=${cookie}` }), { params: Promise.resolve({ machineId: 'PC-006' }) });
+  assert.equal(offline.status, 409);
+});
+
+test('admin close force-logs out active sessions and dispatches a close command', async () => {
+  const { runtime } = await import('../lib/server/runtime');
+  const state = await runtime();
+  const clientToken = state.clientTokens.issue('student3@msu.ac.th').token;
+  const { POST: pollClient } = await import('../app/api/client/poll/route');
+  await pollClient(jsonRequest('/api/client/poll', undefined, { 'X-Machine-Id': 'PC-006', 'X-Client-Key': 'test-client-key' }));
+  const { POST: checkIn } = await import('../app/api/sessions/check-in/route');
+  const created = await checkIn(jsonRequest('/api/sessions/check-in', { machineId: 'PC-006' }, { authorization: `Bearer ${clientToken}` }));
+  const session = await created.json();
+  const { POST: close } = await import('../app/api/admin/machines/[machineId]/close/route');
+  const response = await close(jsonRequest('/api/admin/machines/PC-006/close', undefined, { cookie: `lockcomputer_admin=${await adminCookie()}` }), { params: Promise.resolve({ machineId: 'PC-006' }) });
+  assert.equal(response.status, 202);
+  assert.equal(state.sessions.get(session.id).status, 'ForceLoggedOut');
+  const dispatched = await pollClient(jsonRequest('/api/client/poll', undefined, { 'X-Machine-Id': 'PC-006', 'X-Client-Key': 'test-client-key' }));
+  assert.equal((await dispatched.json()).command.type, 'close');
+  const events = (state.store as unknown as { eventRows: unknown[][] }).eventRows.flat().map(String);
+  assert.equal(events.includes('close-requested'), true);
+  assert.equal(events.includes('close-dispatched'), true);
+});
+
 test('monthly report JSON and CSV require Admin authorization', async () => {
   const { GET: report } = await import('../app/api/admin/reports/monthly/route');
   const { GET: csv } = await import('../app/api/admin/export/monthly.csv/route');
@@ -118,6 +152,27 @@ test('monthly report JSON and CSV require Admin authorization', async () => {
   const csvText = await csvResponse.text();
   assert.match(csvText, /month,zone,user_email,machine_id,session_count,hours/);
   assert.match(csvText, /"A-407"/);
+});
+
+test('monthly report reloads Sessions from the store after external edits', async () => {
+  const { runtime } = await import('../lib/server/runtime');
+  const state = await runtime();
+  const store = state.store as unknown as { sessionRows?: unknown[][] };
+  assert.ok(store.sessionRows, 'the test runtime should expose the in-memory session rows');
+
+  const row = ['external-delete-check', 'PC-203', 'external@msu.ac.th', '2026-09-12T08:00:00.000Z', '2026-09-12T09:00:00.000Z', 'LoggedOut', '2026-09-12T09:00:00.000Z'];
+  state.sessions.restore([row]);
+  store.sessionRows!.push(row);
+  const cookie = await adminCookie();
+  const request = () => new Request('http://localhost/api/admin/reports/monthly?year=2026&month=9', { headers: { cookie: `lockcomputer_admin=${cookie}` } });
+  const { GET: report } = await import('../app/api/admin/reports/monthly/route');
+
+  const beforeDelete = await report(request());
+  assert.equal((await beforeDelete.json()).rows.some((reportRow: { machineId?: string }) => reportRow.machineId === 'PC-203'), true);
+
+  store.sessionRows!.splice(store.sessionRows!.indexOf(row), 1);
+  const afterDelete = await report(request());
+  assert.equal((await afterDelete.json()).rows.some((reportRow: { machineId?: string }) => reportRow.machineId === 'PC-203'), false);
 });
 
 test('OAuth login returns a redirect with both state cookies', async () => {

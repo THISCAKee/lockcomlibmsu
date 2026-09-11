@@ -86,7 +86,7 @@ export type ClientTokenView = {
 
 export type RemoteCommandView = {
   id: string;
-  type: 'shutdown';
+  type: 'shutdown' | 'close';
 };
 
 export type ClientPollView = {

@@ -29,3 +29,23 @@ test('poll consumes a shutdown command exactly once', () => {
   assert.equal(registry.poll('PC-001').command?.id, command?.id);
   assert.equal(registry.poll('PC-001').command, null);
 });
+
+test('registers and consumes one close command', () => {
+  const registry = new PresenceRegistry(new ManualClock());
+  registry.poll('PC-002');
+  const command = registry.tryQueueClose('PC-002');
+  assert.equal(command?.type, 'close');
+  assert.equal(registry.poll('PC-002').command?.type, 'close');
+  assert.equal(registry.poll('PC-002').command, null);
+});
+
+test('rejects duplicate close commands and offline machines', () => {
+  const clock = new ManualClock();
+  const registry = new PresenceRegistry(clock);
+  registry.poll('PC-003');
+  assert.equal(registry.tryQueueClose('PC-003')?.type, 'close');
+  assert.equal(registry.tryQueueClose('PC-003'), null);
+  clock.advance(30_001);
+  assert.equal(registry.canQueueClose('PC-003'), false);
+  assert.equal(registry.tryQueueClose('PC-003'), null);
+});
