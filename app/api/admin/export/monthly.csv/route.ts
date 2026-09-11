@@ -18,8 +18,8 @@ export async function GET(request: Request) {
 
   const report = MonthlyReportBuilder.build(state.sessions.listSessions(), selected);
   const rows = [
-    'month,user_email,machine_id,session_count,hours',
-    ...report.rows.map(row => [selected, csvValue(row.userEmail ?? ''), csvValue(row.machineId ?? ''), row.sessionCount, row.hours].join(',')),
+    'month,zone,user_email,machine_id,session_count,hours',
+    ...report.rows.map(row => [selected, csvValue(row.zone), csvValue(row.userEmail ?? ''), csvValue(row.machineId ?? ''), row.sessionCount, row.hours].join(',')),
   ];
   return new Response(`${rows.join('\n')}\n`, {
     headers: { 'content-type': 'text/csv; charset=utf-8', 'content-disposition': `attachment; filename="lockcomputer-${selected}.csv"` },

@@ -5,6 +5,11 @@ import fs from 'node:fs';
 const root = new URL('..', import.meta.url);
 const read = (relative) => fs.readFileSync(new URL(relative, root), 'utf8');
 
+test('monthly reports expose zone fields', () => {
+  assert.match(read('./app/api/admin/reports/monthly/route.ts'), /MonthlyReportBuilder/);
+  assert.match(read('./app/api/admin/export/monthly.csv/route.ts'), /zone/);
+});
+
 test('Next.js admin page exposes machine, report and force-logout flows', () => {
   const page = read('./app/page.tsx');
   for (const endpoint of ['/api/me', '/api/machines', '/api/admin/reports/monthly', '/api/admin/export/monthly.csv', '/api/admin/sessions/']) {

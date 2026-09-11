@@ -111,9 +111,13 @@ test('monthly report JSON and CSV require Admin authorization', async () => {
   const cookie = await adminCookie();
   const allowed = await report(new Request('http://localhost/api/admin/reports/monthly?year=2026&month=9', { headers: { cookie: `lockcomputer_admin=${cookie}` } }));
   assert.equal(allowed.status, 200);
+  const reportBody = await allowed.json();
+  assert.deepEqual(reportBody.zoneRows.map((row: { zone: string }) => row.zone), ['A-407', 'A-412', 'A-410', 'ชั้น-3', 'DLP', 'ศูนย์อีสาน']);
   const csvResponse = await csv(new Request('http://localhost/api/admin/export/monthly.csv?year=2026&month=9', { headers: { cookie: `lockcomputer_admin=${cookie}` } }));
   assert.equal(csvResponse.status, 200);
-  assert.match(await csvResponse.text(), /month,user_email,machine_id,session_count,hours/);
+  const csvText = await csvResponse.text();
+  assert.match(csvText, /month,zone,user_email,machine_id,session_count,hours/);
+  assert.match(csvText, /"A-407"/);
 });
 
 test('OAuth login returns a redirect with both state cookies', async () => {
