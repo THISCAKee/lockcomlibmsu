@@ -1,9 +1,14 @@
 [CmdletBinding()]
 param(
-    [string]$AppRoot = (Split-Path -Parent $PSScriptRoot)
+    [string]$AppRoot = (Split-Path -Parent $PSScriptRoot),
+    [int]$Port = 3001
 )
 
 $ErrorActionPreference = 'Stop'
+
+if ($Port -lt 1 -or $Port -gt 65535) {
+    throw 'Port must be between 1 and 65535.'
+}
 
 function Require-EnvironmentVariable([string]$Name) {
     $value = [Environment]::GetEnvironmentVariable($Name)
@@ -45,8 +50,8 @@ if (-not (Test-Path -LiteralPath (Join-Path $resolvedRoot '.next') -PathType Con
 
 Push-Location $resolvedRoot
 try {
-    Write-Host 'Starting LockComputer Next.js production service on port 3000.'
-    & npm run start -- -p 3000
+    Write-Host "Starting LockComputer Next.js production service on port $Port."
+    & npm run start -- -p $Port
     if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
 }
 finally {

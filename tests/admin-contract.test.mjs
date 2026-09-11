@@ -38,6 +38,12 @@ test('Next.js admin pages expose machine and usage report flows', () => {
   assert.match(page, /LockComputer Admin/);
 });
 
+test('production service uses the dedicated port 3001', () => {
+  const script = read('./scripts/start-production.ps1');
+  assert.match(script, /\[int\]\$Port = 3001/);
+  assert.match(script, /npm run start -- -p \$Port/);
+});
+
 test('Next.js owns the API and OAuth routes', () => {
   const config = read('./next.config.mjs');
   assert.doesNotMatch(config, /rewrites/);
