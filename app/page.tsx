@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { appPath } from '../lib/app-path';
 import { filterMachines, type MachineStatusFilter } from '../lib/machines';
 import { MACHINE_ZONES, machineCountForZone } from '../lib/server/zones';
 
@@ -58,15 +59,15 @@ export default function AdminPage() {
     setError('');
     if (showRefresh) setRefreshing(true);
     try {
-      const me = await fetch('/api/me');
+      const me = await fetch(appPath('/api/me'));
       if (!me.ok) {
-        window.location.href = '/auth/login?returnUrl=/admin';
+        window.location.href = appPath('/auth/login?returnUrl=/admin');
         return;
       }
 
       const [machineResponse, adminsResponse] = await Promise.all([
-        fetch('/api/machines'),
-        fetch('/api/admin/admins'),
+        fetch(appPath('/api/machines')),
+        fetch(appPath('/api/admin/admins')),
       ]);
       if (!machineResponse.ok || !adminsResponse.ok) throw new Error('โหลดข้อมูลแดชบอร์ดไม่สำเร็จ');
 
@@ -91,7 +92,7 @@ export default function AdminPage() {
     setActing(sessionId);
     setError('');
     try {
-      const response = await fetch(`/api/admin/sessions/${sessionId}/force-logout`, { method: 'POST' });
+      const response = await fetch(appPath(`/api/admin/sessions/${sessionId}/force-logout`), { method: 'POST' });
       if (!response.ok) throw new Error('บังคับออกจากระบบไม่สำเร็จ');
       await load();
     } catch (reason) {
@@ -106,7 +107,7 @@ export default function AdminPage() {
     setActing(`shutdown:${machineId}`);
     setError('');
     try {
-      const response = await fetch(`/api/admin/machines/${machineId}/shutdown`, { method: 'POST' });
+      const response = await fetch(appPath(`/api/admin/machines/${machineId}/shutdown`), { method: 'POST' });
       if (!response.ok) {
         const body = await response.json().catch(() => null) as { error?: string } | null;
         throw new Error(body?.error ?? 'ไม่สามารถสั่งปิดเครื่องได้');
@@ -124,7 +125,7 @@ export default function AdminPage() {
     setActing(`close:${machineId}`);
     setError('');
     try {
-      const response = await fetch(`/api/admin/machines/${machineId}/close`, { method: 'POST' });
+      const response = await fetch(appPath(`/api/admin/machines/${machineId}/close`), { method: 'POST' });
       if (!response.ok) {
         const body = await response.json().catch(() => null) as { error?: string } | null;
         throw new Error(body?.error ?? 'ไม่สามารถสั่งปิดโปรแกรมได้');
@@ -143,7 +144,7 @@ export default function AdminPage() {
     setAdminMessage('');
     setError('');
     try {
-      const response = await fetch('/api/admin/admins', {
+      const response = await fetch(appPath('/api/admin/admins'), {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
         body: JSON.stringify({ email: newAdminEmail }),
@@ -184,7 +185,7 @@ export default function AdminPage() {
         </div>
         <div className="nav-actions">
           <span className="live-badge"><i /> ระบบออนไลน์</span>
-          <a className="button button-ghost usage-nav-link" href="/admin/usage">ข้อมูลการเข้าใช้งาน</a>
+          <a className="button button-ghost usage-nav-link" href={appPath('/admin/usage')}>ข้อมูลการเข้าใช้งาน</a>
           <button className="button button-ghost" onClick={() => load(true).catch(reason => setError(reason instanceof Error ? reason.message : 'รีเฟรชไม่สำเร็จ'))} disabled={refreshing}>
             <RefreshIcon />{refreshing ? 'กำลังรีเฟรช' : 'รีเฟรช'}
           </button>

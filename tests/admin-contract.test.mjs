@@ -38,6 +38,16 @@ test('Next.js admin pages expose machine and usage report flows', () => {
   assert.match(page, /LockComputer Admin/);
 });
 
+test('Admin browser URLs stay inside the Smartlib application path', () => {
+  for (const file of ['./app/page.tsx', './app/admin/usage/page.tsx']) {
+    const source = read(file);
+    assert.match(source, /appPath/);
+    assert.doesNotMatch(source, /fetch\(\s*['"`]\/api\//);
+    assert.doesNotMatch(source, /window\.location\.href\s*=\s*['"`]\/auth\//);
+    assert.doesNotMatch(source, /href=\s*['"]\/admin/);
+  }
+});
+
 test('production service uses the dedicated port 3001', () => {
   const script = read('./scripts/start-production.ps1');
   assert.match(script, /\[int\]\$Port = 3001/);

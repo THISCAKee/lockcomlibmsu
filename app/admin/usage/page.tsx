@@ -1,6 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
+import { appPath } from '../../../lib/app-path';
 import { MACHINE_ZONES } from '../../../lib/server/zones';
 
 type ReportRow = {
@@ -64,14 +65,14 @@ export default function UsagePage() {
     setLoading(true);
     if (showRefresh) setRefreshing(true);
     try {
-      const me = await fetch('/api/me');
+      const me = await fetch(appPath('/api/me'));
       if (!me.ok) {
-        window.location.href = '/auth/login?returnUrl=/admin/usage';
+        window.location.href = appPath('/auth/login?returnUrl=/admin/usage');
         return;
       }
 
       const { year, month } = monthParts(selectedMonth);
-      const response = await fetch(`/api/admin/reports/monthly?year=${year}&month=${month}`);
+      const response = await fetch(appPath(`/api/admin/reports/monthly?year=${year}&month=${month}`));
       if (!response.ok) throw new Error('โหลดข้อมูลการเข้าใช้งานไม่สำเร็จ');
       setReport(await response.json() as Report);
       setLastUpdated(new Date());
@@ -132,7 +133,7 @@ export default function UsagePage() {
           <span><strong>LockComputer</strong><small>MSU Library</small></span>
         </div>
         <div className="nav-actions">
-          <a className="button button-ghost usage-nav-link" href="/admin"><ArrowIcon />สถานะเครื่อง</a>
+          <a className="button button-ghost usage-nav-link" href={appPath('/admin')}><ArrowIcon />สถานะเครื่อง</a>
           <button className="button button-ghost" onClick={() => load(true)} disabled={refreshing}>
             <RefreshIcon />{refreshing ? 'กำลังรีเฟรช' : 'รีเฟรช'}
           </button>
@@ -184,7 +185,7 @@ export default function UsagePage() {
       </section>
 
       <section className="panel usage-table-panel">
-        <div className="panel-heading usage-panel-heading"><div><p className="section-kicker">SESSION COUNTS</p><h2>รายละเอียดการเข้าใช้งาน</h2><p>จำนวนครั้งแยกตามผู้ใช้งานและเครื่อง</p></div><a className="button button-primary" href={`/api/admin/export/monthly.csv?year=${monthParts(selectedMonth).year}&month=${monthParts(selectedMonth).month}`}>ดาวน์โหลด CSV</a></div>
+        <div className="panel-heading usage-panel-heading"><div><p className="section-kicker">SESSION COUNTS</p><h2>รายละเอียดการเข้าใช้งาน</h2><p>จำนวนครั้งแยกตามผู้ใช้งานและเครื่อง</p></div><a className="button button-primary" href={appPath(`/api/admin/export/monthly.csv?year=${monthParts(selectedMonth).year}&month=${monthParts(selectedMonth).month}`)}>ดาวน์โหลด CSV</a></div>
         {report.rows.length === 0 ? <div className="usage-empty"><ChartIcon /><p>ยังไม่มีข้อมูลการเข้าใช้งานในเดือนนี้</p></div> : <div className="table-wrap"><table><thead><tr><th>โซน</th><th>ผู้ใช้งาน</th><th>หมายเลขเครื่อง</th><th>จำนวนครั้ง</th></tr></thead><tbody>{report.rows.map(row => <tr key={`${row.userEmail}-${row.machineId}`}><td><span className="table-zone">{row.zone}</span></td><td><strong>{row.userEmail}</strong></td><td><span className="table-machine">{row.machineId}</span></td><td><strong>{row.sessionCount.toLocaleString('th-TH')}</strong></td></tr>)}</tbody></table></div>}
       </section>
 
