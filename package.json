@@ -8,7 +8,7 @@
     "build": "next build",
     "start": "next start",
     "test": "node tests/admin-contract.test.mjs && node tests/machine-filter.test.mjs && npm run test:server",
-    "test:server": "tsx --test tests/server-config.test.ts tests/zones.test.ts tests/session-manager.test.ts tests/presence-registry.test.ts tests/monthly-report.test.ts tests/google-sheets.test.ts tests/oauth.test.ts tests/auth-session.test.ts tests/client-tokens.test.ts tests/admin-registry.test.ts tests/routes-contract.test.ts"
+    "test:server": "tsx --test tests/app-path.test.ts tests/server-config.test.ts tests/zones.test.ts tests/session-manager.test.ts tests/presence-registry.test.ts tests/monthly-report.test.ts tests/google-sheets.test.ts tests/oauth.test.ts tests/auth-session.test.ts tests/client-tokens.test.ts tests/admin-registry.test.ts tests/routes-contract.test.ts"
   },
   "dependencies": {
     "next": "16.3.4",
