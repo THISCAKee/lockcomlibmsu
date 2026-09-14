@@ -175,13 +175,19 @@ test('monthly report reloads Sessions from the store after external edits', asyn
   assert.equal((await afterDelete.json()).rows.some((reportRow: { machineId?: string }) => reportRow.machineId === 'PC-203'), false);
 });
 
-test('OAuth login returns a redirect with both state cookies', async () => {
+test('OAuth login returns ARR-safe HTML navigation with both state cookies', async () => {
   const { GET } = await import('../app/auth/login/route');
   const response = await GET(new Request('http://localhost:3000/comlibmsu/auth/login?returnUrl=/admin/usage', {
     headers: { 'x-forwarded-proto': 'https' },
   }));
-  assert.equal(response.status, 302);
-  assert.match(response.headers.get('location') ?? '', /client_id=/);
+  assert.equal(response.status, 200);
+  assert.equal(response.headers.get('location'), null);
+  assert.match(response.headers.get('content-type') ?? '', /text\/html/);
+  assert.match(response.headers.get('cache-control') ?? '', /no-store/);
+  const html = await response.text();
+  assert.match(html, /http-equiv="refresh"/i);
+  assert.match(html, /https:\/\/accounts\.google\.com\/o\/oauth2\/v2\/auth/);
+  assert.match(html, /client_id=/);
   const cookies = response.headers.getSetCookie?.().join('\n') ?? response.headers.get('set-cookie') ?? '';
   assert.match(cookies, /lockcomputer_oauth_state=/);
   assert.match(cookies, /lockcomputer_oauth_return=/);

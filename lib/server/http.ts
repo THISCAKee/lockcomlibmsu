@@ -21,3 +21,40 @@ export function isSecureRequest(request: Request) {
 export function redirectResponse(location: string, status = 302) {
   return new Response(null, { status, headers: { location } });
 }
+
+function escapeHtmlAttribute(value: string) {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;');
+}
+
+export function browserNavigationResponse(location: string) {
+  const destination = escapeHtmlAttribute(location);
+  const html = `<!doctype html>
+<html lang="th">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="refresh" content="0;url=${destination}">
+  <title>กำลังเข้าสู่ระบบ</title>
+</head>
+<body>
+  <p>กำลังนำคุณไปยัง Google เพื่อเข้าสู่ระบบ...</p>
+  <p><a href="${destination}">ดำเนินการต่อ</a></p>
+</body>
+</html>`;
+
+  return new Response(html, {
+    status: 200,
+    headers: {
+      'cache-control': 'no-store',
+      'content-type': 'text/html; charset=utf-8',
+      'content-security-policy': "default-src 'none'; style-src 'unsafe-inline'; base-uri 'none'; frame-ancestors 'none'",
+      'referrer-policy': 'no-referrer',
+      'x-content-type-options': 'nosniff',
+    },
+  });
+}
