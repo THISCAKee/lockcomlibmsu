@@ -177,12 +177,43 @@ test('monthly report reloads Sessions from the store after external edits', asyn
 
 test('OAuth login returns a redirect with both state cookies', async () => {
   const { GET } = await import('../app/auth/login/route');
-  const response = await GET(new Request('http://localhost:3000/auth/login?returnUrl=/admin'));
+  const response = await GET(new Request('http://localhost:3000/comlibmsu/auth/login?returnUrl=/admin/usage', {
+    headers: { 'x-forwarded-proto': 'https' },
+  }));
   assert.equal(response.status, 302);
   assert.match(response.headers.get('location') ?? '', /client_id=/);
   const cookies = response.headers.getSetCookie?.().join('\n') ?? response.headers.get('set-cookie') ?? '';
   assert.match(cookies, /lockcomputer_oauth_state=/);
   assert.match(cookies, /lockcomputer_oauth_return=/);
+  assert.match(cookies, /lockcomputer_oauth_return=%2Fadmin%2Fusage/);
+  assert.match(cookies, /Path=\/comlibmsu/);
+  assert.match(cookies, /Secure/);
+});
+
+test('Admin OAuth preserves the usage-page return target', async () => {
+  const { GET } = await import('../app/auth/callback/route');
+  const { getServerConfig } = await import('../lib/server/config');
+  const config = getServerConfig();
+  const originalFetch = globalThis.fetch;
+  globalThis.fetch = async input => String(input) === config.oauth.tokenUrl
+    ? Response.json({ access_token: 'test-access-token' })
+    : Response.json({ email: 'khunanon.m@msu.ac.th' });
+  try {
+    const response = await GET(new Request('http://localhost:3000/comlibmsu/auth/callback?state=test-state&code=test-code', {
+      headers: {
+        'x-forwarded-proto': 'https',
+        cookie: 'lockcomputer_oauth_state=test-state; lockcomputer_oauth_return=%2Fadmin%2Fusage',
+      },
+    }));
+    assert.equal(response.status, 302);
+    assert.equal(response.headers.get('location'), `${config.adminWebUrl.replace(/\/$/, '')}/admin/usage`);
+    const cookies = response.headers.getSetCookie?.().join('\n') ?? response.headers.get('set-cookie') ?? '';
+    assert.match(cookies, /lockcomputer_admin=/);
+    assert.match(cookies, /Path=\/comlibmsu/);
+    assert.match(cookies, /Secure/);
+  } finally {
+    globalThis.fetch = originalFetch;
+  }
 });
 
 test('only the root Admin can add Admin accounts', async () => {
