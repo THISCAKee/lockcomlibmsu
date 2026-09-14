@@ -44,6 +44,19 @@ test('IIS proxies only the comlibmsu application to the loopback Next.js path', 
   assert.doesNotMatch(config, /etraining|localhost:3000/);
 });
 
+test('deployment documentation uses the final Smartlib URLs', () => {
+  const localEnv = read('./.env.example');
+  const productionEnv = read('./deploy/production-env.example');
+  const runbook = read('./docs/operations/2026-09-14-smartlib-subpath-runbook.md');
+  assert.match(localEnv, /http:\/\/localhost:3000\/comlibmsu\/auth\/callback/);
+  assert.match(localEnv, /http:\/\/localhost:3000\/comlibmsu/);
+  for (const source of [productionEnv, runbook]) {
+    assert.match(source, /https:\/\/smartlib\.msu\.ac\.th\/comlibmsu/);
+    assert.match(source, /comlibmsu\/auth\/callback/);
+  }
+  assert.match(runbook, /127\.0\.0\.1:3001\/comlibmsu\/api\/health/);
+});
+
 test('repository ignores environment files and service-account credentials', () => {
   const ignore = read('./.gitignore');
   for (const pattern of ['.env*', 'node_modules/', '.next/', 'service-account', '*.pem']) {

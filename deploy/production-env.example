@@ -1,0 +1,4 @@
+# Copy these two public URL values into the existing production environment file.
+# Keep all existing secrets, spreadsheet IDs, ranges, and machine settings unchanged.
+OAUTH_REDIRECT_URI=https://smartlib.msu.ac.th/comlibmsu/auth/callback
+LOCKCOMPUTER_ADMIN_WEB_URL=https://smartlib.msu.ac.th/comlibmsu

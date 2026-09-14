@@ -43,6 +43,7 @@
 - `tests/admin-contract.test.mjs`: prevents raw root-relative browser URLs from returning.
 - `tests/routes-contract.test.ts`: verifies Login and callback behavior through the route boundary.
 - `tests/production-deployment.test.mjs`: verifies PM2 and IIS deployment declarations.
+- `docs/operations/2026-09-14-smartlib-subpath-runbook.md`: carries the server deployment, IIS, OAuth, and rollback procedure with no secrets.
 - `tests/LockComputer.Client.Tests/Program.cs`: verifies the WPF production base URL and composed endpoint shape.
 
 ---
@@ -632,7 +633,7 @@ Expected: the contract prints `PASS ClientUsesSmartlibSubpathBaseUrl`; both comm
 **Files:**
 - Modify: `.env.example`
 - Create: `deploy/production-env.example`
-- Modify: `docs/superpowers/plans/2026-09-11-windows-server-deploy.md`
+- Create: `docs/operations/2026-09-14-smartlib-subpath-runbook.md`
 - Verify on server: `C:\inetpub\wwwroot\comlibmsu\.env.production.local`
 - Verify on server: `C:\inetpub\wwwroot\comlibmsu\web.config`
 
@@ -648,7 +649,7 @@ Extend `tests/production-deployment.test.mjs`:
 test('deployment documentation uses the final Smartlib URLs', () => {
   const localEnv = read('./.env.example');
   const productionEnv = read('./deploy/production-env.example');
-  const runbook = read('./docs/superpowers/plans/2026-09-11-windows-server-deploy.md');
+  const runbook = read('./docs/operations/2026-09-14-smartlib-subpath-runbook.md');
   assert.match(localEnv, /http:\/\/localhost:3000\/comlibmsu\/auth\/callback/);
   assert.match(localEnv, /http:\/\/localhost:3000\/comlibmsu/);
   for (const source of [productionEnv, runbook]) {
@@ -685,14 +686,14 @@ OAUTH_REDIRECT_URI=https://smartlib.msu.ac.th/comlibmsu/auth/callback
 LOCKCOMPUTER_ADMIN_WEB_URL=https://smartlib.msu.ac.th/comlibmsu
 ```
 
-Update the Windows deployment runbook so internal and external checks are exactly:
+Create `docs/operations/2026-09-14-smartlib-subpath-runbook.md` and document that the Windows deployment checks are exactly:
 
 ```powershell
 Invoke-WebRequest http://127.0.0.1:3001/comlibmsu/api/health
 Invoke-WebRequest https://smartlib.msu.ac.th/comlibmsu/api/health
 ```
 
-Document that `web.config` belongs at `C:\inetpub\wwwroot\comlibmsu\web.config` and that the rewrite rule is scoped to the `comlibmsu` IIS application.
+Document that `web.config` belongs at `C:\inetpub\wwwroot\comlibmsu\web.config`, that the rewrite rule is scoped to the `comlibmsu` IIS application, that port 3001 is loopback-only, and that `etraining` must not be restarted.
 
 - [ ] **Step 4: Run complete local verification**
 
@@ -716,7 +717,7 @@ Expected: every command exits 0 with no failing tests or TypeScript/build errors
 - [ ] **Step 5: Commit code and runbook updates**
 
 ```powershell
-git add .env.example deploy/production-env.example docs/superpowers/plans/2026-09-11-windows-server-deploy.md tests/production-deployment.test.mjs
+git add .env.example deploy/production-env.example docs/operations/2026-09-14-smartlib-subpath-runbook.md tests/production-deployment.test.mjs
 git commit -m "docs: finalize smartlib subpath deployment"
 ```
 
