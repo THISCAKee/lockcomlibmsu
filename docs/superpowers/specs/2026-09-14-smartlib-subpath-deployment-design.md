@@ -56,7 +56,7 @@ The following public routes must work:
 | Session APIs | `/comlibmsu/api/sessions/...` |
 | Admin APIs | `/comlibmsu/api/admin/...` |
 
-Logical OAuth return values remain `/admin` and `/client`; they are internal flow identifiers rather than public URLs. Admin redirects continue to use the configured public Admin URL.
+Logical OAuth return values remain `/admin`, `/admin/usage`, and `/client`; they are internal flow identifiers rather than public URLs. Both Admin return targets require Admin authorization and redirect through the configured public Admin URL. The values remain an explicit allowlist so an OAuth request cannot create an open redirect.
 
 ## OAuth and cookies
 
@@ -126,6 +126,7 @@ Automated verification will cover:
 - Every browser-side API call, login redirect, navigation link, and CSV download uses the shared path helper.
 - OAuth and Admin cookies are created and cleared with `Path=/comlibmsu`.
 - Secure-cookie detection accepts the trusted IIS HTTPS forwarding signal.
+- OAuth preserves the allowlisted `/admin/usage` return target and applies Admin authorization to it.
 - WPF Client URL composition works when `ServerBaseUrl` contains `/comlibmsu`.
 - PM2 binds Next.js to loopback port 3001.
 - Existing server, Admin, reporting, Google Sheets, OAuth, and Client tests remain green.
