@@ -35,6 +35,8 @@ test('PM2 exposes Next.js only through loopback port 3001', () => {
 
 test('IIS proxies only the comlibmsu application to the loopback Next.js path', () => {
   const config = read('./web.config');
+  assert.match(config, /<match url="\^\/?\$" \/>/);
+  assert.match(config, /url="http:\/\/127\.0\.0\.1:3001\/comlibmsu" appendQueryString="true" \/>/);
   assert.match(config, /<match url="\(\.\*\)" \/>/);
   assert.match(config, /https:\/\/smartlib\.msu\.ac\.th\/comlibmsu\/{R:1}/);
   assert.match(config, /url="http:\/\/127\.0\.0\.1:3001\/comlibmsu\/{R:1}"/);
