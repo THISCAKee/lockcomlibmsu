@@ -55,6 +55,8 @@ test('deployment documentation uses the final Smartlib URLs', () => {
     assert.match(source, /comlibmsu\/auth\/callback/);
   }
   assert.match(runbook, /127\.0\.0\.1:3001\/comlibmsu\/api\/health/);
+  assert.match(runbook, /allowedServerVariables/);
+  assert.match(runbook, /HTTP_X_FORWARDED_PROTO/);
 });
 
 test('repository ignores environment files and service-account credentials', () => {

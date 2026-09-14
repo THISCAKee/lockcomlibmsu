@@ -107,6 +107,20 @@ Do not use `pm2 restart all`, `pm2 delete all`, or any command that targets `etr
 5. Confirm `Default Web Site > comlibmsu` is an IIS application with physical path `C:\inetpub\wwwroot\comlibmsu`.
 6. Confirm `web.config` is inside that application, not at the shared Smartlib site root.
 
+The same server-variable change can be applied from an elevated PowerShell window. Run it only if the variable is not already listed; this avoids a duplicate-entry error:
+
+```powershell
+$appCmd = "$env:windir\System32\inetsrv\appcmd.exe"
+$allowed = & $appCmd list config -section:system.webServer/rewrite/allowedServerVariables
+if ($allowed -notmatch 'HTTP_X_FORWARDED_PROTO') {
+  & $appCmd set config -section:system.webServer/rewrite/allowedServerVariables `
+    /+"[name='HTTP_X_FORWARDED_PROTO']" /commit:apphost
+}
+& $appCmd list config -section:system.webServer/rewrite/allowedServerVariables
+```
+
+The final output must contain `HTTP_X_FORWARDED_PROTO`. No `iisreset` is required; retry the health check after the command returns.
+
 The application rule redirects HTTP to HTTPS and proxies HTTPS requests to:
 
 ```text
