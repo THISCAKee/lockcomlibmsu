@@ -175,6 +175,48 @@ test('monthly report reloads Sessions from the store after external edits', asyn
   assert.equal((await afterDelete.json()).rows.some((reportRow: { machineId?: string }) => reportRow.machineId === 'PC-203'), false);
 });
 
+test('Admin dashboard reloads Admins from the store after external edits', async () => {
+  const { runtime } = await import('../lib/server/runtime');
+  const state = await runtime();
+  const store = state.store as unknown as { adminRows?: unknown[][] };
+  assert.ok(store.adminRows, 'the test runtime should expose the in-memory Admin rows');
+
+  const row = ['external-admin@msu.ac.th', 'admin', 'Active', 'khunanon.m@msu.ac.th', '2026-09-15T08:00:00.000Z'];
+  store.adminRows!.push(row);
+  const cookie = await adminCookie();
+  const request = () => new Request('http://localhost/api/admin/admins', { headers: { cookie: `lockcomputer_admin=${cookie}` } });
+  const { GET: admins } = await import('../app/api/admin/admins/route');
+
+  const afterAdd = await admins(request());
+  assert.equal((await afterAdd.json()).admins.some((admin: { email: string }) => admin.email === row[0]), true);
+
+  store.adminRows!.splice(store.adminRows!.indexOf(row), 1);
+  const afterDelete = await admins(request());
+  assert.equal((await afterDelete.json()).admins.some((admin: { email: string }) => admin.email === row[0]), false);
+});
+
+test('Machine dashboard reloads Sessions from the store after external edits', async () => {
+  const { runtime } = await import('../lib/server/runtime');
+  const state = await runtime();
+  const store = state.store as unknown as { sessionRows?: unknown[][] };
+  assert.ok(store.sessionRows, 'the test runtime should expose the in-memory session rows');
+
+  const row = ['external-machine-session', 'PC-203', 'external@msu.ac.th', '2099-09-15T08:00:00.000Z', '2099-09-15T09:00:00.000Z', 'Active', ''];
+  store.sessionRows!.push(row);
+  const { GET: machines } = await import('../app/api/machines/route');
+
+  const afterAdd = await machines();
+  const addedMachine = (await afterAdd.json()).find((machine: { machineId: string }) => machine.machineId === 'PC-203');
+  assert.equal(addedMachine.status, 'InUse');
+  assert.equal(addedMachine.userEmail, 'external@msu.ac.th');
+
+  store.sessionRows!.splice(store.sessionRows!.indexOf(row), 1);
+  const afterDelete = await machines();
+  const deletedMachine = (await afterDelete.json()).find((machine: { machineId: string }) => machine.machineId === 'PC-203');
+  assert.equal(deletedMachine.status, 'Available');
+  assert.equal(deletedMachine.userEmail, undefined);
+});
+
 test('OAuth login returns ARR-safe HTML navigation with both state cookies', async () => {
   const { GET } = await import('../app/auth/login/route');
   const response = await GET(new Request('http://localhost:3000/comlibmsu/auth/login?returnUrl=/admin/usage', {

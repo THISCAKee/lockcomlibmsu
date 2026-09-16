@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   const state = await getRuntime();
+  await state.refreshSessions();
   const active = new Map(state.sessions.listSessions().filter(session => session.status === 'Active').map(session => [session.machineId.toLowerCase(), session]));
   const machines = Array.from({ length: state.config.machineCount }, (_, index) => {
     const machineId = `${state.config.machinePrefix}${String(index + 1).padStart(3, '0')}`;

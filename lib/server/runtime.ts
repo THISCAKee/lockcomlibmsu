@@ -15,6 +15,8 @@ export type RuntimeState = {
   presence: PresenceRegistry;
   clientCodes: OneTimeClientCodeStore;
   clientTokens: ClientTokenStore;
+  refreshAdmins(): Promise<void>;
+  refreshSessions(): Promise<void>;
 };
 
 let statePromise: Promise<RuntimeState> | undefined;
@@ -33,9 +35,25 @@ async function initializeRuntime(): Promise<RuntimeState> {
   const clock: Clock = { now: () => new Date() };
   const store = createSheetStore(config);
   const sessions = new SessionManager(clock, config.sessionHours * 60 * 60 * 1000);
-  sessions.restore(await store.loadSessions());
   const admins = new AdminRegistry(config.rootAdminEmail, config.oauth.allowedEmailDomain, clock);
-  admins.restore(await store.loadAdmins());
+
+  let adminsRefresh: Promise<void> | undefined;
+  const refreshAdmins = () => {
+    adminsRefresh ??= store.loadAdmins()
+      .then(values => admins.replace(values))
+      .finally(() => { adminsRefresh = undefined; });
+    return adminsRefresh;
+  };
+
+  let sessionsRefresh: Promise<void> | undefined;
+  const refreshSessions = () => {
+    sessionsRefresh ??= store.loadSessions()
+      .then(values => sessions.replace(values))
+      .finally(() => { sessionsRefresh = undefined; });
+    return sessionsRefresh;
+  };
+
+  await Promise.all([refreshAdmins(), refreshSessions()]);
   return {
     config,
     store,
@@ -45,5 +63,7 @@ async function initializeRuntime(): Promise<RuntimeState> {
     presence: new PresenceRegistry(clock),
     clientCodes: new OneTimeClientCodeStore(clock),
     clientTokens: new ClientTokenStore(clock),
+    refreshAdmins,
+    refreshSessions,
   };
 }

@@ -9,6 +9,8 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(request: Request, context: { params: Promise<{ machineId: string }> }) {
   const state = await getRuntime();
+  await state.refreshAdmins();
+  await state.refreshSessions();
   const admin = adminEmail(request, state);
   if (!admin) return jsonError('Forbidden.', 403);
 

@@ -11,15 +11,15 @@
     "test:server": "tsx --test tests/app-path.test.ts tests/http.test.ts tests/oauth-return.test.ts tests/server-config.test.ts tests/zones.test.ts tests/session-manager.test.ts tests/presence-registry.test.ts tests/monthly-report.test.ts tests/google-sheets.test.ts tests/oauth.test.ts tests/auth-session.test.ts tests/client-tokens.test.ts tests/admin-registry.test.ts tests/routes-contract.test.ts"
   },
   "dependencies": {
-    "next": "16.3.4",
-    "react": "19.2.0",
-    "react-dom": "19.2.0"
+    "next": "^16.3.5",
+    "react": "^19.3.0",
+    "react-dom": "^19.3.0"
   },
   "devDependencies": {
-    "@types/node": "22.15.21",
-    "@types/react": "19.2.2",
-    "@types/react-dom": "19.2.2",
+    "@types/node": "^26.5.1",
+    "@types/react": "^19.3.0",
+    "@types/react-dom": "^19.3.0",
     "tsx": "^4.23.13",
-    "typescript": "5.8.3"
+    "typescript": "^7.0.2"
   }
 }

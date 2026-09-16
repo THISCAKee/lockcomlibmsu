@@ -31,6 +31,7 @@ export async function GET(request: Request) {
     }
 
     if (isAdminOAuthReturn(returnUrl)) {
+      await state.refreshAdmins();
       if (!state.admins.isAdmin(email)) return clearAuthCookies(jsonError('This account is not an Admin.', 403));
       const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000);
       const response = redirectResponse(`${state.config.adminWebUrl.replace(/\/$/, '')}${returnUrl}`);

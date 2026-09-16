@@ -6,6 +6,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const state = await getRuntime();
+  await state.refreshAdmins();
   const email = adminEmail(request, state);
   return email ? Response.json({ email, role: 'admin' }) : Response.json(null, { status: 401 });
 }

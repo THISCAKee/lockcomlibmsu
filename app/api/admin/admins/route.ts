@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 
 export async function GET(request: Request) {
   const state = await getRuntime();
+  await state.refreshAdmins();
   const admin = adminEmail(request, state);
   if (!admin) return jsonError('Forbidden.', 403);
   return Response.json({ admins: state.admins.list(), canManage: state.admins.canManage(admin) });
@@ -15,6 +16,7 @@ export async function GET(request: Request) {
 
 export async function POST(request: Request) {
   const state = await getRuntime();
+  await state.refreshAdmins();
   const admin = adminEmail(request, state);
   if (!admin || !state.admins.canManage(admin)) return jsonError('Forbidden.', 403);
 

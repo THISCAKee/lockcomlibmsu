@@ -49,6 +49,11 @@ export class AdminRegistry {
     }
   }
 
+  replace(values: Iterable<AdminRecord | unknown[]>) {
+    this.admins.clear();
+    this.restore(values);
+  }
+
   list(): AdminView[] {
     const root: AdminView = { email: this.rootEmail, role: 'root', status: 'Active' };
     const added = Array.from(this.admins.values())

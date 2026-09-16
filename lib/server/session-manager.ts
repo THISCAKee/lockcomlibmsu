@@ -85,6 +85,11 @@ export class SessionManager {
     this.reconcileExpiredSessions();
   }
 
+  replace(values: Iterable<Session | unknown[]>) {
+    this.sessions.clear();
+    this.restore(values);
+  }
+
   private end(id: string, status: Exclude<SessionStatus, 'Active' | 'Expired'>) {
     const session = this.get(id);
     if (session.status !== 'Active') return;
