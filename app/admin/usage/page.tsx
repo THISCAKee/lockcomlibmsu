@@ -2,7 +2,6 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { appPath } from '../../../lib/app-path';
-import { MACHINE_ZONES } from '../../../lib/server/zones';
 
 type ReportRow = {
   zone: string;
@@ -157,7 +156,7 @@ export default function UsagePage() {
 
       <section className="metrics usage-metrics" aria-label="สรุปข้อมูลการเข้าใช้งาน">
         <article className="metric-card metric-total"><span className="metric-icon"><ChartIcon /></span><div><p>เข้าใช้งานทั้งหมด</p><strong>{totalSessions.toLocaleString('th-TH')}</strong><small>ครั้งในเดือนนี้</small></div></article>
-        <article className="metric-card metric-active"><span className="metric-icon">{activeZones}</span><div><p>โซนที่มีการใช้งาน</p><strong>{activeZones}</strong><small>จาก {MACHINE_ZONES.length} โซน</small></div></article>
+        <article className="metric-card metric-active"><span className="metric-icon">{activeZones}</span><div><p>โซนที่มีการใช้งาน</p><strong>{activeZones}</strong><small>จาก {report.zoneRows.length} โซน</small></div></article>
         <article className="metric-card metric-available"><span className="metric-icon">{leadingZone?.zone.slice(0, 2) ?? '—'}</span><div><p>โซนที่ใช้งานสูงสุด</p><strong>{leadingZone?.zone ?? '—'}</strong><small>{leadingZone ? `${leadingZone.sessionCount.toLocaleString('th-TH')} ครั้ง` : 'ยังไม่มีข้อมูล'}</small></div></article>
         <article className="metric-card metric-rate"><div className="rate-copy"><div><p>เครื่องในระบบ</p><strong>{totalMachines.toLocaleString('th-TH')}</strong></div><small>ครอบคลุมทุกโซน</small></div><div className="progress"><span style={{ width: `${Math.min(100, totalMachines / 203 * 100)}%` }} /></div></article>
       </section>

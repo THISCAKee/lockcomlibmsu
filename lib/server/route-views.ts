@@ -21,6 +21,8 @@ export function sessionRow(session: Session, action: 'created' | 'updated') {
     session.status,
     session.endedAt ?? '',
     action,
+    session.zoneId ?? '',
+    session.zoneName ?? '',
   ];
 }
 

@@ -4,6 +4,7 @@ import { OneTimeClientCodeStore, ClientTokenStore } from './client-tokens';
 import { PresenceRegistry } from './presence-registry';
 import { SessionManager, type Clock } from './session-manager';
 import { AdminRegistry } from './admin-registry';
+import { ZoneCheckIn } from './zone-check-in';
 import type { ServerConfig } from './types';
 
 export type RuntimeState = {
@@ -11,6 +12,7 @@ export type RuntimeState = {
   store: SheetStore;
   clock: Clock;
   sessions: SessionManager;
+  zoneCheckIn: ZoneCheckIn;
   admins: AdminRegistry;
   presence: PresenceRegistry;
   clientCodes: OneTimeClientCodeStore;
@@ -59,6 +61,7 @@ async function initializeRuntime(): Promise<RuntimeState> {
     store,
     clock,
     sessions,
+    zoneCheckIn: new ZoneCheckIn(store, sessions, clock, config.machineCount),
     admins,
     presence: new PresenceRegistry(clock),
     clientCodes: new OneTimeClientCodeStore(clock),

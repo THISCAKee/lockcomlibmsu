@@ -1,14 +1,15 @@
-'use client';
+﻿'use client';
 
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { appPath } from '../lib/app-path';
+import DailyUsageLookup from './components/daily-usage-lookup';
 import { filterMachines, type MachineStatusFilter } from '../lib/machines';
-import { MACHINE_ZONES, machineCountForZone } from '../lib/server/zones';
 
 type Machine = {
   machineId: string;
   name: string;
   zone: string;
+  dailyLimit: number | null;
   status: 'Available' | 'InUse';
   userEmail?: string;
   expiresAt?: string;
@@ -185,6 +186,7 @@ export default function AdminPage() {
         </div>
         <div className="nav-actions">
           <span className="live-badge"><i /> ระบบออนไลน์</span>
+          <a className="button button-ghost usage-nav-link" href={appPath('/admin/zones')}>ตั้งค่าโซน</a>
           <a className="button button-ghost usage-nav-link" href={appPath('/admin/usage')}>ข้อมูลการเข้าใช้งาน</a>
           <button className="button button-ghost" onClick={() => load(true).catch(reason => setError(reason instanceof Error ? reason.message : 'รีเฟรชไม่สำเร็จ'))} disabled={refreshing}>
             <RefreshIcon />{refreshing ? 'กำลังรีเฟรช' : 'รีเฟรช'}
@@ -211,6 +213,8 @@ export default function AdminPage() {
           <div className="progress"><span style={{ width: `${utilization}%` }} /></div>
         </article>
       </section>
+
+      <DailyUsageLookup />
 
       <section className="panel admin-panel">
         <div className="panel-heading">
@@ -242,7 +246,7 @@ export default function AdminPage() {
 
         <div className="toolbar">
           <label className="search-box"><SearchIcon /><input value={query} onChange={event => setQuery(event.target.value)} placeholder="ค้นหาหมายเลขเครื่องหรืออีเมลผู้ใช้" aria-label="ค้นหาเครื่อง" />{query && <button onClick={() => setQuery('')} aria-label="ล้างคำค้นหา">×</button>}</label>
-          <label className="zone-select"><span>โซน</span><select value={zoneFilter} onChange={event => setZoneFilter(event.target.value)} aria-label="กรองตามโซน"><option value="all">ทุกโซน</option>{MACHINE_ZONES.map(zone => <option key={zone.name} value={zone.name}>{zone.name} · {machineCountForZone(zone.name)} เครื่อง</option>)}</select></label>
+          <label className="zone-select"><span>โซน</span><select value={zoneFilter} onChange={event => setZoneFilter(event.target.value)} aria-label="กรองตามโซน"><option value="all">ทุกโซน</option>{Array.from(new Set(machines.map(machine => machine.zone))).sort().map(zone => <option key={zone} value={zone}>{zone}</option>)}</select></label>
           <div className="filter-tabs" role="group" aria-label="กรองสถานะเครื่อง">
             {([
               ['all', 'ทั้งหมด', machines.length],
@@ -258,6 +262,7 @@ export default function AdminPage() {
             return <article key={machine.machineId} className={`machine-card ${inUse ? 'is-active' : 'is-available'}`}>
               <div className="machine-top"><span className="computer-icon"><i /></span><div className="machine-badges"><span className={`connection-badge ${machine.online ? 'is-online' : 'is-offline'}`}><i />{machine.online ? 'ออนไลน์' : 'ออฟไลน์'}</span><span className="status-badge"><i />{inUse ? 'กำลังใช้งาน' : 'ว่าง'}</span></div></div>
               <div className="machine-name"><h3>{machine.name}</h3><span className="machine-zone-label">{machine.zone}</span><span>{machine.machineId}</span></div>
+              <p className="machine-daily-limit">สิทธิ์ต่ออีเมล: {machine.dailyLimit === null ? 'ไม่จำกัด' : `${machine.dailyLimit} ครั้ง/วัน`}</p>
               {inUse ? <div className="session-detail">
                 <p><span>ผู้ใช้งาน</span><strong title={machine.userEmail}>{machine.userEmail}</strong></p>
                 <p><span>หมดเวลา</span><strong>{formatTime(machine.expiresAt)} น.</strong></p>

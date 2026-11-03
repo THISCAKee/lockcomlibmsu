@@ -1,4 +1,4 @@
-import type { OAuthConfig, ServerConfig, SheetsConfig } from './types';
+﻿import type { OAuthConfig, ServerConfig, SheetsConfig } from './types';
 
 const defaultSpreadsheetId = '1eM1HT_PBI3Zt33R05l-3N9h9t45wFqXI8YinK65SNBU';
 const defaultOAuthClientId = '854787076786-hlvo0jqsvtssm7lnjhlrh440hhiht3rl.apps.googleusercontent.com';
@@ -42,7 +42,7 @@ export function getServerConfig(): ServerConfig {
     userInfoUrl: firstEnvironmentValue('OAUTH_USER_INFO_URL', 'OAuth__UserInfoUrl') || 'https://www.googleapis.com/oauth2/v2/userinfo',
     clientId: requiredProductionValue(firstEnvironmentValue('OAUTH_CLIENT_ID', 'OAuth__ClientId') || defaultOAuthClientId, 'OAUTH_CLIENT_ID'),
     clientSecret: requiredProductionValue(firstEnvironmentValue('OAUTH_CLIENT_SECRET', 'OAuth__ClientSecret'), 'OAUTH_CLIENT_SECRET'),
-    redirectUri: requiredProductionValue(firstEnvironmentValue('OAUTH_REDIRECT_URI', 'OAuth__RedirectUri') || 'http://localhost:3000/auth/callback', 'OAUTH_REDIRECT_URI'),
+    redirectUri: requiredProductionValue(firstEnvironmentValue('OAUTH_REDIRECT_URI', 'OAuth__RedirectUri') || 'http://localhost:3000/comlibmsu/auth/callback', 'OAUTH_REDIRECT_URI'),
     scope: firstEnvironmentValue('OAUTH_SCOPE', 'OAuth__Scope') || 'openid email profile',
     allowedEmailDomain: firstEnvironmentValue('OAUTH_ALLOWED_EMAIL_DOMAIN', 'OAuth__AllowedEmailDomain') || 'msu.ac.th',
   };
@@ -50,7 +50,7 @@ export function getServerConfig(): ServerConfig {
   const sheets: SheetsConfig = {
     spreadsheetId: requiredProductionValue(firstEnvironmentValue('GOOGLE_SHEETS_SPREADSHEET_ID', 'GoogleSheets__SpreadsheetId') || defaultSpreadsheetId, 'GOOGLE_SHEETS_SPREADSHEET_ID'),
     credentialsFile: requiredProductionValue(firstEnvironmentValue('GOOGLE_SHEETS_CREDENTIALS_FILE', 'GoogleSheets__CredentialsFile'), 'GOOGLE_SHEETS_CREDENTIALS_FILE'),
-    sessionsRange: firstEnvironmentValue('GOOGLE_SHEETS_SESSIONS_RANGE', 'GoogleSheets__SessionsRange') || 'Sessions!A:H',
+    sessionsRange: (firstEnvironmentValue('GOOGLE_SHEETS_SESSIONS_RANGE', 'GoogleSheets__SessionsRange') || 'Sessions!A:J').replace(/!A:H$/i, '!A:J'),
     eventsRange: firstEnvironmentValue('GOOGLE_SHEETS_EVENTS_RANGE', 'GoogleSheets__EventsRange') || 'Events!A:F',
     adminsRange: firstEnvironmentValue('GOOGLE_SHEETS_ADMINS_RANGE', 'GoogleSheets__AdminsRange') || 'Admins!A:E',
   };

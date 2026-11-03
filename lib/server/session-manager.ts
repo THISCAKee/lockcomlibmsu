@@ -100,7 +100,7 @@ export class SessionManager {
 
 export function parseSessionRow(row: unknown[]): Session | null {
   if (row.length < 6) return null;
-  const [id, machineId, userEmail, startedAt, expiresAt, status, endedAt] = row.map(value => String(value ?? ''));
+  const [id, machineId, userEmail, startedAt, expiresAt, status, endedAt, _action, zoneId, zoneName] = row.map(value => String(value ?? ''));
   if (!id || !machineId || !userEmail || !startedAt || !expiresAt || !statuses.has(status as SessionStatus)) return null;
   if (!Number.isFinite(Date.parse(startedAt)) || !Number.isFinite(Date.parse(expiresAt))) return null;
   return {
@@ -110,6 +110,7 @@ export function parseSessionRow(row: unknown[]): Session | null {
     startedAt: new Date(startedAt).toISOString(),
     expiresAt: new Date(expiresAt).toISOString(),
     status: status as SessionStatus,
+    ...(zoneId ? { zoneId, zoneName } : {}),
     ...(endedAt && Number.isFinite(Date.parse(endedAt)) ? { endedAt: new Date(endedAt).toISOString() } : {}),
   };
 }

@@ -16,5 +16,5 @@ export async function GET(request: Request) {
   const selected = validMonth(`${year.padStart(4, '0')}-${month.padStart(2, '0')}`);
   if (!selected) return jsonError('Invalid year or month.', 400);
   const sessions = await state.store.loadSessions();
-  return Response.json(MonthlyReportBuilder.build(sessions, selected));
+  return Response.json(MonthlyReportBuilder.build(sessions, selected, await state.zoneCheckIn.loadZones()));
 }

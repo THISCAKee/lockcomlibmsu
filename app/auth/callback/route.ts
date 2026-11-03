@@ -1,3 +1,4 @@
+﻿import { APP_BASE_PATH, appPath } from '../../../lib/app-path';
 import { runtime as getRuntime } from '../../../lib/server/runtime';
 import { exchangeCodeForEmail, isAllowedEmail } from '../../../lib/server/oauth';
 import { isAdminOAuthReturn, normalizeOAuthReturn } from '../../../lib/server/oauth-return';
@@ -34,7 +35,9 @@ export async function GET(request: Request) {
       await state.refreshAdmins();
       if (!state.admins.isAdmin(email)) return clearAuthCookies(jsonError('This account is not an Admin.', 403));
       const expiresAt = new Date(Date.now() + 12 * 60 * 60 * 1000);
-      const response = redirectResponse(`${state.config.adminWebUrl.replace(/\/$/, '')}${returnUrl}`);
+      const base = state.config.adminWebUrl.replace(/\/$/, '');
+      const origin = base.endsWith(APP_BASE_PATH) ? base.slice(0, -APP_BASE_PATH.length) : base;
+      const response = redirectResponse(`${origin}${appPath(returnUrl)}`);
       response.headers.append('set-cookie', setCookie('lockcomputer_admin', signAdminCookie(email, expiresAt, state.config.authSecret), { maxAge: 12 * 60 * 60, secure }));
       return clearAuthCookies(response);
     }

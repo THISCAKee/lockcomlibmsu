@@ -1,3 +1,4 @@
+import type { Zone } from './zone-policy';
 import type { AdminRecord, Session, ServerConfig } from './types';
 import { parseSessionRow } from './session-manager';
 import { parseAdminRow } from './admin-registry';
@@ -6,6 +7,8 @@ import { GoogleSheetsStore } from './google-sheets';
 export interface SheetStore {
   readonly name: string;
   loadSessions(): Promise<Session[]>;
+  loadZones(): Promise<Zone[] | null>;
+  saveZones(zones: Zone[]): Promise<void>;
   loadAdmins(): Promise<AdminRecord[]>;
   appendSession(row: unknown[]): Promise<void>;
   appendEvent(row: unknown[]): Promise<void>;
@@ -14,6 +17,9 @@ export interface SheetStore {
 
 export class InMemorySheetStore implements SheetStore {
   readonly name = 'in-memory';
+  private zones: Zone[] | null = null;
+  async loadZones() { return this.zones === null ? null : structuredClone(this.zones); }
+  async saveZones(zones: Zone[]) { this.zones = structuredClone(zones); }
   readonly sessionRows: unknown[][];
   readonly eventRows: unknown[][];
   readonly adminRows: unknown[][];

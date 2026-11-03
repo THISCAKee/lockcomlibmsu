@@ -46,3 +46,11 @@ test('assigns sessions to zones and aggregates monthly usage by zone', () => {
     { zone: 'ศูนย์อีสาน', machineCount: 2, sessionCount: 1, hours: 1 },
   ]);
 });
+test('monthly report counts a session with lifecycle updates only once', async () => {
+  const { MonthlyReportBuilder } = await import('../lib/server/monthly-report');
+  const row = { id: 'visit', machineId: 'PC-001', userEmail: 'one@msu.ac.th', startedAt: '2026-11-03T03:00:00Z', expiresAt: '2026-11-03T04:00:00Z', status: 'Active' as const, zoneId: 'z', zoneName: 'Original zone' };
+  const result = MonthlyReportBuilder.build([row, { ...row, status: 'LoggedOut', endedAt: '2026-11-03T03:30:00Z' }], '2026-11', [{ id: 'z', name: 'New name', machines: ['PC-001'], dailyLimit: 1 }]);
+  assert.equal(result.rows.length, 1);
+  assert.equal(result.rows[0].sessionCount, 1);
+  assert.equal(result.rows[0].zone, 'Original zone');
+});

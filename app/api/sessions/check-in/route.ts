@@ -2,7 +2,7 @@ import { runtime as getRuntime } from '../../../../lib/server/runtime';
 import { isKnownMachine } from '../../../../lib/server/config';
 import { readJson, clientEmail, jsonError } from '../../../../lib/server/route-auth';
 import { SessionConflictError } from '../../../../lib/server/session-manager';
-import { eventRow, sessionRow, sessionView } from '../../../../lib/server/route-views';
+import { eventRow, sessionView } from '../../../../lib/server/route-views';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -25,9 +25,8 @@ export async function POST(request: Request) {
   if (!isKnownMachine(machineId, state.config)) return jsonError('Machine was not found.', 404);
 
   try {
-    const session = state.sessions.checkIn(machineId, email);
-    await state.store.appendSession(sessionRow(session, 'created'));
-    await state.store.appendEvent(eventRow(session.id, session.machineId, session.userEmail, 'check-in'));
+    const session = await state.zoneCheckIn.checkIn(machineId, email);
+    await state.store.appendEvent(eventRow(session.id, session.machineId, session.userEmail, 'check-in')).catch(() => undefined);
     return Response.json(sessionView(session));
   } catch (error) {
     if (error instanceof SessionConflictError) return jsonError(error.message, 409);

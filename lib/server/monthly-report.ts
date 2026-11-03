@@ -1,32 +1,35 @@
-import { MACHINE_ZONES, machineCountForZone, zoneForMachine } from './zones';
+﻿import { MACHINE_ZONES, machineCountForZone, zoneForMachine } from './zones';
+import type { Zone } from './zone-policy';
 import type { MonthlyReportView, Session } from './types';
 
 export class MonthlyReportBuilder {
-  static build(sessions: Iterable<Session>, month: string): MonthlyReportView {
+  static build(sessions: Iterable<Session>, month: string, zones?: Zone[]): MonthlyReportView {
     const start = Date.parse(`${month}-01T00:00:00.000Z`);
     const end = Date.parse(`${month}-01T00:00:00.000Z`) + 32 * 24 * 60 * 60 * 1000;
     const endDate = new Date(end);
     endDate.setUTCDate(1);
     const monthEnd = endDate.getTime();
     const groups = new Map<string, { zone: string; userEmail: string; machineId: string; sessionCount: number; hours: number }>();
-    const zoneGroups = new Map(MACHINE_ZONES.map(zone => [zone.name, {
+    const zoneGroups = new Map((zones ?? MACHINE_ZONES).map(zone => [zone.name, {
       zone: zone.name,
-      machineCount: machineCountForZone(zone.name),
+      machineCount: 'machines' in zone ? zone.machines.length : machineCountForZone(zone.name),
       sessionCount: 0,
       hours: 0,
     }]));
 
-    for (const session of Array.from(sessions)) {
+    const latestSessions = new Map(Array.from(sessions, session => [session.id, session] as const));
+    for (const session of latestSessions.values()) {
       const started = Date.parse(session.startedAt);
       const finished = Date.parse(session.endedAt ?? session.expiresAt);
       if (!Number.isFinite(started) || !Number.isFinite(finished) || started >= monthEnd || finished <= start) continue;
-      const zone = zoneForMachine(session.machineId) ?? 'ไม่ระบุ';
-      const key = `${session.userEmail}|${session.machineId}`;
+      const zone = session.zoneName ?? (zones ? zones.find(z => z.machines.includes(session.machineId.toUpperCase()))?.name : zoneForMachine(session.machineId)) ?? 'ไม่ระบุ';
+      const key = `${zone}|${session.userEmail}|${session.machineId}`;
       const group = groups.get(key) ?? { zone, userEmail: session.userEmail, machineId: session.machineId, sessionCount: 0, hours: 0 };
       const hours = Math.max(0, (finished - started) / (60 * 60 * 1000));
       group.sessionCount += 1;
       group.hours += hours;
       groups.set(key, group);
+      if (!zoneGroups.has(zone)) zoneGroups.set(zone, { zone, machineCount: 0, sessionCount: 0, hours: 0 });
       const zoneGroup = zoneGroups.get(zone);
       if (zoneGroup) {
         zoneGroup.sessionCount += 1;

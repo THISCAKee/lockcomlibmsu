@@ -263,3 +263,23 @@ footer { display: flex; justify-content: space-between; padding: 24px 4px 0; col
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { scroll-behavior: auto !important; animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; }
 }
+.zone-settings { max-width: 1050px; margin: 32px auto; padding: 0 20px 60px; color: #19323b; }
+.zone-settings > a { color: #167d87; }
+.zone-settings > p { line-height: 1.7; }
+.zone-settings-card { margin: 18px 0; padding: 20px; background: white; border: 1px solid #d7e2e7; border-radius: 14px; }
+.zone-settings-fields { display: flex; flex-wrap: wrap; align-items: end; gap: 14px; }
+.zone-settings-fields label { display: grid; gap: 5px; }
+.zone-settings-fields input { border: 1px solid #cbd9de; border-radius: 7px; padding: 9px; }
+.zone-settings button { padding: 10px 14px; border: 1px solid #b6cbd0; border-radius: 8px; cursor: pointer; background: white; }
+.zone-settings details { margin-top: 16px; }
+.zone-settings summary { cursor: pointer; font-weight: 600; }
+.zone-machine-grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(150px,1fr)); gap: 8px; max-height: 300px; overflow: auto; padding: 15px 0; }
+.zone-machine-grid label { font-size: .8rem; }
+.zone-settings-actions { display: flex; gap: 12px; align-items: center; flex-wrap: wrap; }
+.daily-usage-panel { margin-bottom: 20px; }
+.daily-usage-form, .daily-usage-results, .daily-usage-error { margin: 16px 24px 22px; }
+.daily-usage-form label { display: block; margin-bottom: 8px; font-weight: 600; }
+.daily-usage-form > div { display: flex; flex-wrap: wrap; gap: 10px; }
+.daily-usage-form input { min-width: min(320px, 100%); padding: 10px 12px; border: 1px solid #cbd9de; border-radius: 10px; font: inherit; }
+.daily-usage-error { color: #a33a3a; }
+.machine-daily-limit { margin: 8px 0; color: #536c78; font-size: .72rem; }

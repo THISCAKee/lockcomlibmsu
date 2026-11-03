@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
@@ -19,7 +19,7 @@ test('monthly reports expose zone fields', () => {
 test('Admin dashboard exposes zone filtering and summaries', () => {
   const page = read('./app/page.tsx');
   const zones = read('./lib/server/zones.ts');
-  assert.match(page, /MACHINE_ZONES/);
+  assert.ok(page.includes('machines.map(machine => machine.zone)'));
   assert.match(page, /zoneFilter/);
   assert.match(page, /machine\.zone === zoneFilter/);
   for (const zone of ['A-407', 'A-412', 'A-410', 'ชั้น-3', 'DLP', 'ศูนย์อีสาน']) {

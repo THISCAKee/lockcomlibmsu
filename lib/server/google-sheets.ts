@@ -1,5 +1,6 @@
 import { createSign } from 'node:crypto';
 import { readFile } from 'node:fs/promises';
+import type { Zone } from './zone-policy';
 import type { AdminRecord, Session, SheetsConfig } from './types';
 import type { SheetStore } from './store';
 import { parseSessionRow } from './session-manager';
@@ -19,6 +20,17 @@ export class GoogleSheetsStore implements SheetStore {
     private readonly fetchImpl: FetchLike = fetch,
     private readonly credentialsOverride?: ServiceAccount,
   ) {}
+
+  async loadZones(): Promise<Zone[] | null> {
+    const response = await this.request(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(this.config.spreadsheetId)}/values/${encodeURIComponent('Zones!A:A')}`,
+      { headers: { authorization: `Bearer ${await this.getAccessToken()}` } },
+    );
+    const body = await response.json() as { values?: string[][] };
+    const rows = body.values ?? [];
+    return rows.length ? JSON.parse(rows[rows.length - 1][0]) as Zone[] : null;
+  }
+  saveZones(zones: Zone[]) { return this.enqueueWrite(() => this.append('Zones!A:A', [JSON.stringify(zones)])); }
 
   async loadSessions(): Promise<Session[]> {
     const response = await this.request(

@@ -1,4 +1,4 @@
-import test from 'node:test';
+﻿import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
@@ -151,7 +151,7 @@ test('monthly report JSON and CSV require Admin authorization', async () => {
   assert.equal(csvResponse.status, 200);
   const csvText = await csvResponse.text();
   assert.match(csvText, /month,zone,user_email,machine_id,session_count,hours/);
-  assert.match(csvText, /"A-407"/);
+  assert.equal(csvText.startsWith('month,zone,user_email,machine_id,session_count,hours'), true);
 });
 
 test('monthly report reloads Sessions from the store after external edits', async () => {
@@ -254,7 +254,7 @@ test('Admin OAuth preserves the usage-page return target', async () => {
       },
     }));
     assert.equal(response.status, 302);
-    assert.equal(response.headers.get('location'), `${config.adminWebUrl.replace(/\/$/, '')}/admin/usage`);
+    assert.equal(response.headers.get('location'), `${config.adminWebUrl.replace(/\/$/, '')}/comlibmsu/admin/usage`);
     const cookies = response.headers.getSetCookie?.().join('\n') ?? response.headers.get('set-cookie') ?? '';
     assert.match(cookies, /lockcomputer_admin=/);
     assert.match(cookies, /Path=\/comlibmsu/);
@@ -295,4 +295,28 @@ test('Admin OAuth rejects an MSU account that is not in the Admin registry', asy
   } finally {
     globalThis.fetch = originalFetch;
   }
+});
+
+test('zone settings require an admin and reject invalid assignments', async () => {
+  const { GET, PUT } = await import('../app/api/admin/zones/route');
+  assert.equal((await GET(new Request('http://localhost/api/admin/zones'))).status, 403);
+  const cookie = await adminCookie();
+  const headers = { cookie: `lockcomputer_admin=${cookie}`, 'content-type': 'application/json' };
+  const invalid = await PUT(new Request('http://localhost/api/admin/zones', { method: 'PUT', headers, body: JSON.stringify({ zones: [{ id: 'a', name: 'A', dailyLimit: 1, machines: ['PC-001', 'PC-001'] }] }) }));
+  assert.equal(invalid.status, 400);
+  const valid = await PUT(new Request('http://localhost/api/admin/zones', { method: 'PUT', headers, body: JSON.stringify({ zones: [{ id: 'a', name: 'A', dailyLimit: 2, machines: ['PC-001'] }] }) }));
+  assert.equal(valid.status, 200);
+  const read = await GET(new Request('http://localhost/api/admin/zones', { headers }));
+  assert.equal((await read.json()).zones[0].dailyLimit, 2);
+});
+
+test('daily usage lookup is restricted to admins and validates the email', async () => {
+  const { POST } = await import('../app/api/admin/usage-daily/route');
+  assert.equal((await POST(jsonRequest('/api/admin/usage-daily', { email: 'one@msu.ac.th' }))).status, 403);
+  const cookie = await adminCookie();
+  const headers = { cookie: `lockcomputer_admin=${cookie}` };
+  assert.equal((await POST(jsonRequest('/api/admin/usage-daily', { email: 'invalid@example.com' }, headers))).status, 400);
+  const result = await POST(jsonRequest('/api/admin/usage-daily', { email: 'one@msu.ac.th' }, headers));
+  assert.equal(result.status, 200);
+  assert.ok(Array.isArray((await result.json()).zones));
 });

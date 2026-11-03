@@ -8,6 +8,8 @@ export type Session = {
   expiresAt: string;
   status: SessionStatus;
   endedAt?: string;
+  zoneId?: string;
+  zoneName?: string;
 };
 
 export type AdminRecord = {
