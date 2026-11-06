@@ -9,8 +9,8 @@ export const MACHINE_ZONES: readonly ZoneDefinition[] = [
   { name: 'A-412', start: 51, end: 100 },
   { name: 'A-410', start: 101, end: 150 },
   { name: 'ชั้น-3', start: 151, end: 171 },
-  { name: 'DLP', start: 172, end: 201 },
-  { name: 'ศูนย์อีสาน', start: 202, end: 203 },
+  { name: 'DLP', start: 172, end: 195 },
+  { name: 'pavilion', start: 196, end: 203 },
 ];
 
 export function zoneForMachine(machineId: string): string | null {

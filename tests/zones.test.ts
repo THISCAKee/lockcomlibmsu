@@ -12,13 +12,15 @@ test('maps every machine boundary to the approved zone', () => {
   assert.equal(zoneForMachine('PC-151'), 'ชั้น-3');
   assert.equal(zoneForMachine('PC-171'), 'ชั้น-3');
   assert.equal(zoneForMachine('PC-172'), 'DLP');
-  assert.equal(zoneForMachine('PC-201'), 'DLP');
-  assert.equal(zoneForMachine('PC-202'), 'ศูนย์อีสาน');
-  assert.equal(zoneForMachine('PC-203'), 'ศูนย์อีสาน');
+  assert.equal(zoneForMachine('PC-195'), 'DLP');
+  assert.equal(zoneForMachine('PC-196'), 'pavilion');
+  assert.equal(zoneForMachine('PC-201'), 'pavilion');
+  assert.equal(zoneForMachine('PC-202'), 'pavilion');
+  assert.equal(zoneForMachine('PC-203'), 'pavilion');
   assert.equal(zoneForMachine('PC-204'), null);
 });
 
 test('zone counts sum to the 203-machine inventory', () => {
-  assert.deepEqual(MACHINE_ZONES.map(zone => machineCountForZone(zone.name)), [50, 50, 50, 21, 30, 2]);
+  assert.deepEqual(MACHINE_ZONES.map(zone => machineCountForZone(zone.name)), [50, 50, 50, 21, 24, 8]);
   assert.equal(MACHINE_ZONES.reduce((total, zone) => total + machineCountForZone(zone.name), 0), 203);
 });

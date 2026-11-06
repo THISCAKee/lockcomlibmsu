@@ -43,7 +43,7 @@ test('machines returns 203 inventory with online and lastSeenAt', async () => {
   assert.equal(machines[0].zone, 'A-407');
   assert.equal(machines[50].zone, 'A-412');
   assert.equal(machines[202].machineId, 'PC-203');
-  assert.equal(machines[202].zone, 'ศูนย์อีสาน');
+  assert.equal(machines[202].zone, 'pavilion');
   assert.equal(machines[0].online, true);
   assert.equal(typeof machines[0].lastSeenAt, 'string');
 });
@@ -146,7 +146,7 @@ test('monthly report JSON and CSV require Admin authorization', async () => {
   const allowed = await report(new Request('http://localhost/api/admin/reports/monthly?year=2026&month=9', { headers: { cookie: `lockcomputer_admin=${cookie}` } }));
   assert.equal(allowed.status, 200);
   const reportBody = await allowed.json();
-  assert.deepEqual(reportBody.zoneRows.map((row: { zone: string }) => row.zone), ['A-407', 'A-412', 'A-410', 'ชั้น-3', 'DLP', 'ศูนย์อีสาน']);
+  assert.deepEqual(reportBody.zoneRows.map((row: { zone: string }) => row.zone), ['A-407', 'A-412', 'A-410', 'ชั้น-3', 'DLP', 'pavilion']);
   const csvResponse = await csv(new Request('http://localhost/api/admin/export/monthly.csv?year=2026&month=9', { headers: { cookie: `lockcomputer_admin=${cookie}` } }));
   assert.equal(csvResponse.status, 200);
   const csvText = await csvResponse.text();

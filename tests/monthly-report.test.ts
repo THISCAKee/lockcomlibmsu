@@ -42,8 +42,8 @@ test('assigns sessions to zones and aggregates monthly usage by zone', () => {
     { zone: 'A-412', machineCount: 50, sessionCount: 1, hours: 3 },
     { zone: 'A-410', machineCount: 50, sessionCount: 0, hours: 0 },
     { zone: 'ชั้น-3', machineCount: 21, sessionCount: 0, hours: 0 },
-    { zone: 'DLP', machineCount: 30, sessionCount: 0, hours: 0 },
-    { zone: 'ศูนย์อีสาน', machineCount: 2, sessionCount: 1, hours: 1 },
+    { zone: 'DLP', machineCount: 24, sessionCount: 0, hours: 0 },
+    { zone: 'pavilion', machineCount: 8, sessionCount: 1, hours: 1 },
   ]);
 });
 test('monthly report counts a session with lifecycle updates only once', async () => {

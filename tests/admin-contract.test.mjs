@@ -22,7 +22,7 @@ test('Admin dashboard exposes zone filtering and summaries', () => {
   assert.ok(page.includes('machines.map(machine => machine.zone)'));
   assert.match(page, /zoneFilter/);
   assert.match(page, /machine\.zone === zoneFilter/);
-  for (const zone of ['A-407', 'A-412', 'A-410', 'ชั้น-3', 'DLP', 'ศูนย์อีสาน']) {
+  for (const zone of ['A-407', 'A-412', 'A-410', 'ชั้น-3', 'DLP', 'pavilion']) {
     assert.match(zones, new RegExp(zone));
   }
 });
