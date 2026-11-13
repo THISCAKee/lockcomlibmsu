@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
 import { appPath } from '../lib/app-path';
 import DailyUsageLookup from './components/daily-usage-lookup';
+import SessionTimer from './components/session-timer';
 import { filterMachines, type MachineStatusFilter } from '../lib/machines';
 
 type Machine = {
@@ -12,6 +13,7 @@ type Machine = {
   dailyLimit: number | null;
   status: 'Available' | 'InUse';
   userEmail?: string;
+  startedAt?: string;
   expiresAt?: string;
   sessionId?: string;
   online: boolean;
@@ -265,7 +267,9 @@ export default function AdminPage() {
               <p className="machine-daily-limit">สิทธิ์ต่ออีเมล: {machine.dailyLimit === null ? 'ไม่จำกัด' : `${machine.dailyLimit} ครั้ง/วัน`}</p>
               {inUse ? <div className="session-detail">
                 <p><span>ผู้ใช้งาน</span><strong title={machine.userEmail}>{machine.userEmail}</strong></p>
+                <p><span>เริ่มใช้งาน</span><strong>{formatTime(machine.startedAt)} น.</strong></p>
                 <p><span>หมดเวลา</span><strong>{formatTime(machine.expiresAt)} น.</strong></p>
+                <SessionTimer startedAt={machine.startedAt} expiresAt={machine.expiresAt} />
                 <div className="machine-actions"><button className="button button-danger" disabled={!machine.sessionId || acting === machine.sessionId} onClick={() => forceLogout(machine.sessionId!)}>{acting === machine.sessionId ? 'กำลังดำเนินการ...' : 'บังคับออกจากระบบ'}</button><button className="button button-close" disabled={!machine.online || acting === `close:${machine.machineId}`} title={machine.online ? 'สั่งปิดโปรแกรม LockComputer' : 'เครื่องออฟไลน์'} onClick={() => closeMachine(machine.machineId)}><CloseIcon />{acting === `close:${machine.machineId}` ? 'กำลังส่งคำสั่ง...' : 'ปิดโปรแกรม'}</button><button className="button button-shutdown" disabled={!machine.online || acting === `shutdown:${machine.machineId}`} title={machine.online ? 'สั่งปิดเครื่อง Windows' : 'เครื่องออฟไลน์'} onClick={() => shutdownMachine(machine.machineId)}><PowerIcon />{acting === `shutdown:${machine.machineId}` ? 'กำลังส่งคำสั่ง...' : 'ปิดเครื่อง'}</button></div>
               </div> : <div className="available-copy"><span>พร้อมใช้งาน</span><p>ยังไม่มีผู้ใช้เครื่องนี้</p><div className="machine-actions"><button className="button button-close" disabled={!machine.online || acting === `close:${machine.machineId}`} title={machine.online ? 'สั่งปิดโปรแกรม LockComputer' : 'เครื่องออฟไลน์'} onClick={() => closeMachine(machine.machineId)}><CloseIcon />{acting === `close:${machine.machineId}` ? 'กำลังส่งคำสั่ง...' : 'ปิดโปรแกรม'}</button><button className="button button-shutdown" disabled={!machine.online || acting === `shutdown:${machine.machineId}`} title={machine.online ? 'สั่งปิดเครื่อง Windows' : 'เครื่องออฟไลน์'} onClick={() => shutdownMachine(machine.machineId)}><PowerIcon />{acting === `shutdown:${machine.machineId}` ? 'กำลังส่งคำสั่ง...' : 'ปิดเครื่อง'}</button></div></div>}
             </article>;

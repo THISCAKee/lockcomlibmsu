@@ -20,6 +20,7 @@ export async function GET() {
       dailyLimit: zone?.dailyLimit ?? null,
       status: session ? 'InUse' : 'Available',
       userEmail: session?.userEmail,
+      startedAt: session?.startedAt,
       expiresAt: session?.expiresAt,
       sessionId: session?.id,
       online: presence.online,

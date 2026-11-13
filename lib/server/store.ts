@@ -7,6 +7,7 @@ import { GoogleSheetsStore } from './google-sheets';
 export interface SheetStore {
   readonly name: string;
   loadSessions(): Promise<Session[]>;
+  loadEvents(): Promise<unknown[][]>;
   loadZones(): Promise<Zone[] | null>;
   saveZones(zones: Zone[]): Promise<void>;
   loadAdmins(): Promise<AdminRecord[]>;
@@ -36,6 +37,10 @@ export class InMemorySheetStore implements SheetStore {
 
   async appendSession(row: unknown[]) {
     this.sessionRows.push(row);
+  }
+
+  async loadEvents() {
+    return this.eventRows.map(row => [...row]);
   }
 
   async appendEvent(row: unknown[]) {

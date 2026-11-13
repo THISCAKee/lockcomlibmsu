@@ -2,6 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from 'react';
 import { appPath } from '../../../lib/app-path';
+import ActivityLog from '../../components/activity-log';
 
 type ReportRow = {
   zone: string;
@@ -187,6 +188,8 @@ export default function UsagePage() {
         <div className="panel-heading usage-panel-heading"><div><p className="section-kicker">SESSION COUNTS</p><h2>รายละเอียดการเข้าใช้งาน</h2><p>จำนวนครั้งแยกตามผู้ใช้งานและเครื่อง</p></div><a className="button button-primary" href={appPath(`/api/admin/export/monthly.csv?year=${monthParts(selectedMonth).year}&month=${monthParts(selectedMonth).month}`)}>ดาวน์โหลด CSV</a></div>
         {report.rows.length === 0 ? <div className="usage-empty"><ChartIcon /><p>ยังไม่มีข้อมูลการเข้าใช้งานในเดือนนี้</p></div> : <div className="table-wrap"><table><thead><tr><th>โซน</th><th>ผู้ใช้งาน</th><th>หมายเลขเครื่อง</th><th>จำนวนครั้ง</th></tr></thead><tbody>{report.rows.map(row => <tr key={`${row.userEmail}-${row.machineId}`}><td><span className="table-zone">{row.zone}</span></td><td><strong>{row.userEmail}</strong></td><td><span className="table-machine">{row.machineId}</span></td><td><strong>{row.sessionCount.toLocaleString('th-TH')}</strong></td></tr>)}</tbody></table></div>}
       </section>
+
+      <ActivityLog />
 
       <footer><span>LockComputer Administration</span><span>มหาวิทยาลัยมหาสารคาม</span></footer>
     </div>

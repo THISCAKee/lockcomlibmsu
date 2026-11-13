@@ -41,6 +41,15 @@ export class GoogleSheetsStore implements SheetStore {
     return (body.values ?? []).map(parseSessionRow).filter((session): session is Session => session !== null);
   }
 
+  async loadEvents(): Promise<unknown[][]> {
+    const response = await this.request(
+      `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(this.config.spreadsheetId)}/values/${encodeURIComponent(this.config.eventsRange)}`,
+      { headers: { authorization: `Bearer ${await this.getAccessToken()}` } },
+    );
+    const body = await response.json() as { values?: unknown[][] };
+    return body.values ?? [];
+  }
+
   async loadAdmins(): Promise<AdminRecord[]> {
     const response = await this.request(
       `https://sheets.googleapis.com/v4/spreadsheets/${encodeURIComponent(this.config.spreadsheetId)}/values/${encodeURIComponent(this.config.adminsRange ?? 'Admins!A:E')}`,
