@@ -1,4 +1,4 @@
-import { bangkokDay } from './zone-policy';
+import { bangkokDay, type Zone } from './zone-policy';
 import type { Session } from './types';
 
 export type ActorRole = 'user' | 'admin' | 'system';
@@ -13,6 +13,8 @@ export type ActivityEntry = {
   actorRole: ActorRole;
   detail: string;
   sessionId: string;
+  /** Zone at check-in time when known, otherwise the machine's current zone. */
+  zone: string;
   /** Minutes since the session started, for events that end a session. */
   usedMinutes: number | null;
 };
@@ -26,15 +28,22 @@ const labels: Record<string, string> = {
   'close-dispatched': 'เครื่องรับคำสั่งปิดโปรแกรม',
   'shutdown-requested': 'สั่งปิดเครื่อง',
   'shutdown-dispatched': 'เครื่องรับคำสั่งปิดเครื่อง',
+  'client-disconnected': 'หลุดเพราะเชื่อมต่อ server ไม่ได้',
 };
 
 const detailLabels: Record<string, string> = {
   'remote-close': 'จากการสั่งปิดโปรแกรม',
   'remote-shutdown': 'จากการสั่งปิดเครื่อง',
   'remote-admin': '',
+  'heartbeat-timeout': 'ติดต่อ server ไม่ได้ติดต่อกันนานเกิน 3 นาที',
+  offline: 'ขณะเครื่องติดต่อ server ไม่ได้',
+  'session-missing': 'server ไม่พบ session นี้',
+  'session-forbidden': 'session ไม่ตรงกับบัญชีที่ login',
 };
 
-const sessionEndingActions = new Set(['logout', 'force-logout', 'expired']);
+export const UNASSIGNED_ZONE = 'ไม่ระบุ';
+
+const sessionEndingActions = new Set(['logout', 'force-logout', 'expired', 'client-disconnected']);
 
 export function isValidDay(value: string | null): value is string {
   return !!value && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(`${value}T00:00:00Z`));
@@ -63,8 +72,11 @@ export function buildActivityLog(
   day: string,
   now: Date,
   email?: string,
+  zones: Zone[] = [],
 ): ActivityEntry[] {
   const byId = latestSessions(sessionRecords);
+  const zoneOf = (session: Session | undefined, machineId: string) =>
+    session?.zoneName || zones.find(zone => zone.machines.includes(machineId.toUpperCase()))?.name || UNASSIGNED_ZONE;
   const sessions = Array.from(byId.values());
   const entries: ActivityEntry[] = [];
 
@@ -87,6 +99,7 @@ export function buildActivityLog(
       actorRole,
       detail: detailLabels[detail] ?? detail,
       sessionId,
+      zone: zoneOf(session, machineId),
       usedMinutes: session && sessionEndingActions.has(action) ? minutesBetween(session.startedAt, at) : null,
     });
   }
@@ -105,6 +118,7 @@ export function buildActivityLog(
       actorRole: 'system',
       detail: '',
       sessionId: session.id,
+      zone: zoneOf(session, session.machineId),
       usedMinutes: minutesBetween(session.startedAt, session.expiresAt),
     });
   }

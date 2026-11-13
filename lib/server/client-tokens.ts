@@ -1,4 +1,4 @@
-import { randomBytes } from 'node:crypto';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import type { Clock } from './session-manager';
 import type { ClientTokenView } from './types';
 
@@ -22,24 +22,40 @@ export class OneTimeClientCodeStore {
   }
 }
 
+/**
+ * Client bearer tokens are HMAC-signed rather than kept in memory, so they stay valid
+ * across a server restart or redeploy and signed-in machines are not kicked out.
+ */
 export class ClientTokenStore {
-  private readonly tokens = new Map<string, StoredValue>();
-
-  constructor(private readonly clock: Clock, private readonly ttlMs = 12 * 60 * 60 * 1000) {}
+  constructor(
+    private readonly clock: Clock,
+    private readonly ttlMs = 12 * 60 * 60 * 1000,
+    private readonly secret: string = randomBytes(32).toString('hex'),
+  ) {}
 
   issue(email: string): ClientTokenView {
-    const token = randomBytes(32).toString('hex');
     const expiresAt = this.clock.now().getTime() + this.ttlMs;
-    this.tokens.set(token, { email, expiresAt });
+    const encoded = Buffer.from(JSON.stringify({ email, expiresAt, nonce: randomBytes(8).toString('hex') } satisfies StoredValue & { nonce: string }), 'utf8').toString('base64url');
+    const token = `${encoded}.${this.signature(encoded)}`;
     return { token, userEmail: email, expiresAt: new Date(expiresAt).toISOString() };
   }
 
   find(token: string) {
-    const value = this.tokens.get(token);
-    if (!value || value.expiresAt <= this.clock.now().getTime()) {
-      this.tokens.delete(token);
+    const [encoded, provided, extra] = token.split('.');
+    if (!encoded || !provided || extra !== undefined) return null;
+    const expected = Buffer.from(this.signature(encoded), 'base64url');
+    const actual = Buffer.from(provided, 'base64url');
+    if (expected.length !== actual.length || !timingSafeEqual(expected, actual)) return null;
+    try {
+      const value = JSON.parse(Buffer.from(encoded, 'base64url').toString('utf8')) as Partial<StoredValue>;
+      if (typeof value.email !== 'string' || typeof value.expiresAt !== 'number') return null;
+      return value.expiresAt > this.clock.now().getTime() ? value.email : null;
+    } catch {
       return null;
     }
-    return value.email;
+  }
+
+  private signature(encoded: string) {
+    return createHmac('sha256', this.secret).update(`client-token:${encoded}`).digest('base64url');
   }
 }

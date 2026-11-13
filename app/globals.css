@@ -301,3 +301,8 @@ footer { display: flex; justify-content: space-between; padding: 24px 4px 0; col
 .daily-usage-form input { min-width: min(320px, 100%); padding: 10px 12px; border: 1px solid #cbd9de; border-radius: 10px; font: inherit; }
 .daily-usage-error { color: #a33a3a; }
 .machine-daily-limit { margin: 8px 0; color: #536c78; font-size: .72rem; }
+
+.activity-zone-tabs { flex-wrap: wrap; width: fit-content; max-width: calc(100% - 56px); margin: 0 28px 16px; }
+.activity-zone-group + .activity-zone-group { margin-top: 6px; }
+.activity-zone-heading { display: flex; align-items: center; gap: 9px; margin: 0; padding: 12px 28px; border-top: 1px solid var(--line); color: #273e48; background: #fffbea; font-size: .82rem; }
+.activity-zone-heading small { margin-left: auto; color: #8c9aa0; font-size: .68rem; font-weight: 600; }

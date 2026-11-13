@@ -65,7 +65,7 @@ async function initializeRuntime(): Promise<RuntimeState> {
     admins,
     presence: new PresenceRegistry(clock),
     clientCodes: new OneTimeClientCodeStore(clock),
-    clientTokens: new ClientTokenStore(clock),
+    clientTokens: new ClientTokenStore(clock, undefined, config.authSecret),
     refreshAdmins,
     refreshSessions,
   };

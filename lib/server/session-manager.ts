@@ -54,8 +54,8 @@ export class SessionManager {
     return Array.from(this.sessions.values()).find(session => session.status === 'Active' && session.machineId.toLowerCase() === machineId.trim().toLowerCase()) ?? null;
   }
 
-  logout(id: string) {
-    this.end(id, 'LoggedOut');
+  logout(id: string, endedAt?: Date) {
+    this.end(id, 'LoggedOut', endedAt);
   }
 
   forceLogout(id: string) {
@@ -90,11 +90,11 @@ export class SessionManager {
     this.restore(values);
   }
 
-  private end(id: string, status: Exclude<SessionStatus, 'Active' | 'Expired'>) {
+  private end(id: string, status: Exclude<SessionStatus, 'Active' | 'Expired'>, endedAt?: Date) {
     const session = this.get(id);
     if (session.status !== 'Active') return;
     session.status = status;
-    session.endedAt = this.clock.now().toISOString();
+    session.endedAt = (endedAt ?? this.clock.now()).toISOString();
   }
 }
 

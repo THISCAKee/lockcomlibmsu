@@ -51,3 +51,12 @@ test('active sessions that have not expired yet produce no expiry entry', () => 
   const entries = buildActivityLog([], sessions, '2026-11-13', new Date('2026-11-13T05:00:00.000Z'));
   assert.equal(entries.length, 0);
 });
+
+test('activity entries carry the zone from check-in, falling back to the machine zone', () => {
+  const zoned = sessions.map(session => session.id === 's1' ? { ...session, zoneName: 'DLP' } : session);
+  const zones = [{ id: 'z1', name: 'A-412', machines: ['PC-184', 'PC-185'], dailyLimit: null }];
+  const entries = buildActivityLog(events, zoned, '2026-11-13', now, undefined, zones);
+  assert.equal(entries.find(entry => entry.action === 'force-logout')!.zone, 'DLP');
+  assert.equal(entries.find(entry => entry.action === 'logout')!.zone, 'A-412');
+  assert.equal(entries.find(entry => entry.action === 'expired')!.zone, 'ไม่ระบุ');
+});

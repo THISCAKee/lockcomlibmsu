@@ -320,3 +320,35 @@ test('daily usage lookup is restricted to admins and validates the email', async
   assert.equal(result.status, 200);
   assert.ok(Array.isArray((await result.json()).zones));
 });
+
+test('client disconnect report ends the active session once at the reported time', async () => {
+  const { runtime } = await import('../lib/server/runtime');
+  const state = await runtime();
+  const token = state.clientTokens.issue('student4@msu.ac.th').token;
+  const { POST: checkIn } = await import('../app/api/sessions/check-in/route');
+  const session = await (await checkIn(jsonRequest('/api/sessions/check-in', { machineId: 'PC-007' }, { authorization: `Bearer ${token}` }))).json();
+  const { POST: disconnect } = await import('../app/api/client/disconnect/route');
+  const machine = { 'X-Machine-Id': 'PC-007', 'X-Client-Key': 'test-client-key' };
+
+  assert.equal((await disconnect(jsonRequest('/api/client/disconnect', { sessionId: session.id, reason: 'heartbeat-timeout' }))).status, 401);
+  const wrongMachine = await disconnect(jsonRequest('/api/client/disconnect', { sessionId: session.id, reason: 'heartbeat-timeout' }, { 'X-Machine-Id': 'PC-008', 'X-Client-Key': 'test-client-key' }));
+  assert.equal(wrongMachine.status, 403);
+  assert.equal(state.sessions.get(session.id).status, 'Active');
+
+  const occurredAt = new Date(Date.now() - 60_000).toISOString();
+  const first = await disconnect(jsonRequest('/api/client/disconnect', { sessionId: session.id, reason: 'heartbeat-timeout', occurredAt }, machine));
+  assert.deepEqual(await first.json(), { ended: true });
+  assert.equal(state.sessions.get(session.id).status, 'LoggedOut');
+  assert.equal(state.sessions.get(session.id).endedAt, occurredAt);
+  const repeated = await disconnect(jsonRequest('/api/client/disconnect', { sessionId: session.id, reason: 'heartbeat-timeout', occurredAt }, machine));
+  assert.deepEqual(await repeated.json(), { ended: false });
+  const events = (state.store as unknown as { eventRows: unknown[][] }).eventRows.filter(row => row[4] === 'client-disconnected' && row[1] === session.id);
+  assert.equal(events.length, 1);
+
+  const again = await checkIn(jsonRequest('/api/sessions/check-in', { machineId: 'PC-007' }, { authorization: `Bearer ${token}` }));
+  assert.equal(again.status, 200);
+  const offlineLogout = await disconnect(jsonRequest('/api/client/disconnect', { sessionId: (await again.json()).id, reason: 'logout-unreachable' }, machine));
+  assert.deepEqual(await offlineLogout.json(), { ended: true });
+  const lastEvent = (state.store as unknown as { eventRows: unknown[][] }).eventRows.at(-1)!;
+  assert.deepEqual(lastEvent.slice(3), ['student4@msu.ac.th', 'logout', 'offline']);
+});

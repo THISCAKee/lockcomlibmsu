@@ -22,3 +22,13 @@ test('Client bearer tokens expire and are not logged', () => {
   clock.now = () => new Date('2026-09-10T21:00:00.000Z');
   assert.equal(store.find(issued.token), null);
 });
+
+test('Client bearer tokens survive a server restart when the secret is unchanged', () => {
+  const clock = { now: () => new Date('2026-09-10T08:00:00.000Z') };
+  const issued = new ClientTokenStore(clock, 60_000, 'shared-secret').issue('student@msu.ac.th');
+  assert.equal(new ClientTokenStore(clock, 60_000, 'shared-secret').find(issued.token), 'student@msu.ac.th');
+  assert.equal(new ClientTokenStore(clock, 60_000, 'other-secret').find(issued.token), null);
+  const [payload] = issued.token.split('.');
+  const forged = Buffer.from(JSON.stringify({ email: 'admin@msu.ac.th', expiresAt: Date.parse('2030-01-01') }), 'utf8').toString('base64url');
+  assert.equal(new ClientTokenStore(clock, 60_000, 'shared-secret').find(issued.token.replace(payload, forged)), null);
+});
