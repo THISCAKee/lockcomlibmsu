@@ -36,6 +36,7 @@ const tone = (action: string) => {
   if (action === 'check-in') return 'is-start';
   if (action === 'logout') return 'is-end';
   if (action === 'force-logout' || action === 'client-disconnected') return 'is-forced';
+  if (action === 'session-abandoned') return 'is-expired';
   if (action === 'expired') return 'is-expired';
   return 'is-command';
 };

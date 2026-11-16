@@ -31,7 +31,16 @@ export class ZoneCheckIn {
     const zone = zones.find(z => z.machines.includes(machineId.toUpperCase()));
     const records = await this.store.loadSessions();
     this.sessions.replace(records);
-    const attributed = this.sessions.listSessions().map(s => s.zoneId ? s : { ...s, zoneId: zones.find(z => z.machines.includes(s.machineId.toUpperCase()))?.id });
+    const abandoned = this.sessions.closeAbandoned(machineId, email);
+    for (const { session, reason } of abandoned) {
+      await this.store.appendSession(sessionRow(session, 'updated'));
+      await this.store.appendEvent([session.endedAt ?? this.clock.now().toISOString(), session.id, session.machineId, '', 'session-abandoned', reason]).catch(() => undefined);
+    }
+    // Signing in again on the same machine continues the same visit, so it does not use up another daily turn.
+    const continued = new Set(abandoned.filter(item => item.reason === 'same-user-relogin').map(item => item.session.id));
+    const attributed = this.sessions.listSessions()
+      .filter(s => !continued.has(s.id))
+      .map(s => s.zoneId ? s : { ...s, zoneId: zones.find(z => z.machines.includes(s.machineId.toUpperCase()))?.id });
     if (zone?.dailyLimit !== null && zone?.dailyLimit !== undefined && dailyUsage(attributed, email, zone.id, this.clock.now()) >= zone.dailyLimit) {
       throw new SessionConflictError(`คุณใช้สิทธิ์โซน ${zone.name} ครบ ${zone.dailyLimit} ครั้งแล้ว กรุณาใช้งานอีกครั้งหลังเที่ยงคืน`);
     }
@@ -39,7 +48,7 @@ export class ZoneCheckIn {
     session.zoneId = zone?.id ?? '_unassigned';
     session.zoneName = zone?.name ?? 'ไม่ระบุ';
     try { await this.store.appendSession(sessionRow(session, 'created')); }
-    catch (error) { this.sessions.replace(records); throw error; }
+    catch (error) { this.sessions.discard(session.id); throw error; }
     return session;
   }); }
 }

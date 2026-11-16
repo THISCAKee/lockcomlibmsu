@@ -53,3 +53,20 @@ test('daily usage shows used and remaining quota by zone without counting update
   await store.appendSession([session.id, session.machineId, session.userEmail, session.startedAt, session.expiresAt, session.status, session.endedAt, 'updated', session.zoneId, session.zoneName]);
   assert.deepEqual(await service.usageForEmail('ONE@msu.ac.th'), [{ id: 'z', name: 'Zone', dailyLimit: 2, used: 1, remaining: 1 }, { id: 'free', name: 'Free', dailyLimit: null, used: 0, remaining: null }]);
 });
+
+test('re-login after being kicked out replaces the leftover session without using another daily turn', async () => {
+  const { InMemorySheetStore } = await import('../lib/server/store');
+  const { SessionManager } = await import('../lib/server/session-manager');
+  const { ZoneCheckIn } = await import('../lib/server/zone-check-in');
+  const clock = { now: () => new Date('2026-11-16T08:29:00.000Z') };
+  const store = new InMemorySheetStore();
+  await store.saveZones([{ id: 'dlp', name: 'DLP', machines: ['PC-181'], dailyLimit: 1 }]);
+  const sessions = new SessionManager(clock, 3 * 60 * 60 * 1000);
+  const checkIn = new ZoneCheckIn(store, sessions, clock, 203);
+  const first = await checkIn.checkIn('PC-181', 'student@msu.ac.th');
+  clock.now = () => new Date('2026-11-16T08:40:00.000Z');
+  const second = await checkIn.checkIn('PC-181', 'student@msu.ac.th');
+  assert.notEqual(second.id, first.id);
+  assert.equal(sessions.get(first.id).status, 'LoggedOut');
+  assert.equal(store.eventRows.some(row => row[1] === first.id && row[4] === 'session-abandoned' && row[5] === 'same-user-relogin'), true);
+});

@@ -29,6 +29,7 @@ const labels: Record<string, string> = {
   'shutdown-requested': 'สั่งปิดเครื่อง',
   'shutdown-dispatched': 'เครื่องรับคำสั่งปิดเครื่อง',
   'client-disconnected': 'หลุดเพราะเชื่อมต่อ server ไม่ได้',
+  'session-abandoned': 'ปิด session ที่ค้างอยู่',
 };
 
 const detailLabels: Record<string, string> = {
@@ -37,13 +38,15 @@ const detailLabels: Record<string, string> = {
   'remote-admin': '',
   'heartbeat-timeout': 'ติดต่อ server ไม่ได้ติดต่อกันนานเกิน 3 นาที',
   offline: 'ขณะเครื่องติดต่อ server ไม่ได้',
+  'same-user-relogin': 'ผู้ใช้คนเดิม login ใหม่ที่เครื่องเดิม',
+  'no-heartbeat': 'เครื่องไม่ตอบสนองนานเกิน 4 นาที',
   'session-missing': 'server ไม่พบ session นี้',
   'session-forbidden': 'session ไม่ตรงกับบัญชีที่ login',
 };
 
 export const UNASSIGNED_ZONE = 'ไม่ระบุ';
 
-const sessionEndingActions = new Set(['logout', 'force-logout', 'expired', 'client-disconnected']);
+const sessionEndingActions = new Set(['logout', 'force-logout', 'expired', 'client-disconnected', 'session-abandoned']);
 
 export function isValidDay(value: string | null): value is string {
   return !!value && /^\d{4}-\d{2}-\d{2}$/.test(value) && Number.isFinite(Date.parse(`${value}T00:00:00Z`));
