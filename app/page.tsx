@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import { useCallback, useEffect, useMemo, useState, type FormEvent } from 'react';
+import { useCallback, useEffect, useMemo, useState, type CSSProperties, type FormEvent } from 'react';
 import { appPath } from '../lib/app-path';
 import DailyUsageLookup from './components/daily-usage-lookup';
 import SessionTimer from './components/session-timer';
@@ -25,6 +25,23 @@ type Admin = { email: string; role: 'root' | 'admin'; status: 'Active'; addedBy?
 const formatTime = (value?: string) => value
   ? new Date(value).toLocaleTimeString('th-TH', { hour: '2-digit', minute: '2-digit' })
   : '-';
+
+// Each row holds 10 machines: 5 on the left side of the aisle, 5 on the right.
+const PCS_PER_ROW = 10;
+// Zones whose room is laid out differently from the default rows of 10 (matched by zone name).
+const ZONE_LAYOUTS: Record<string, 'two-columns'> = { 'ชั้น-3': 'two-columns' };
+// Display order on narrow screens; on wide screens each zone also gets a named grid area (see .seat-map in globals.css):
+// left column A-407, A-410, DLP, pavilion; right column A-412 with ชั้น-3 below it.
+const ZONE_ORDER = ['A-407', 'A-412', 'A-410', 'DLP', 'pavilion', 'ชั้น-3'];
+const ZONE_AREAS: Record<string, string> = { 'A-407': 'z407', 'A-412': 'z412', 'A-410': 'z410', 'DLP': 'zdlp', 'pavilion': 'zpav', 'ชั้น-3': 'zfl3' };
+const seatNumber = (machineId: string) => Number(/(\d+)$/.exec(machineId)?.[1] ?? 0);
+// Same thresholds as SessionTimer: plenty of time left, 30 minutes or less, 10 minutes or less (or expired).
+const sessionTone = (expiresAt?: string) => {
+  const remaining = expiresAt ? Date.parse(expiresAt) - Date.now() : NaN;
+  if (!Number.isFinite(remaining)) return 'ok';
+  return remaining <= 10 * 60000 ? 'critical' : remaining <= 30 * 60000 ? 'warning' : 'ok';
+};
+const chunk = <T,>(items: T[], size: number) => Array.from({ length: Math.ceil(items.length / size) }, (_, i) => items.slice(i * size, (i + 1) * size));
 
 function RefreshIcon() {
   return <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20 6v5h-5M4 18v-5h5M18.5 9A7 7 0 0 0 6.7 6.7L4 9m16 6-2.7 2.3A7 7 0 0 1 5.5 15" /></svg>;
@@ -57,6 +74,7 @@ export default function AdminPage() {
   const [newAdminEmail, setNewAdminEmail] = useState('');
   const [adminSaving, setAdminSaving] = useState(false);
   const [adminMessage, setAdminMessage] = useState('');
+  const [selectedId, setSelectedId] = useState<string | null>(null);
 
   const load = useCallback(async (showRefresh = false) => {
     setError('');
@@ -172,6 +190,45 @@ export default function AdminPage() {
     [machines, query, statusFilter, zoneFilter],
   );
 
+  const visibleIds = useMemo(() => new Set(visibleMachines.map(machine => machine.machineId)), [visibleMachines]);
+  // Every machine stays in its seat; filters only dim the ones that don't match, so the room layout never shifts.
+  const seatZones = useMemo(() => {
+    const zones = new Map<string, Machine[]>();
+    const sorted = [...machines].sort((a, b) => seatNumber(a.machineId) - seatNumber(b.machineId));
+    for (const machine of sorted) {
+      if (zoneFilter !== 'all' && machine.zone !== zoneFilter) continue;
+      zones.set(machine.zone, [...(zones.get(machine.zone) ?? []), machine]);
+    }
+    const order = (name: string) => { const index = ZONE_ORDER.indexOf(name); return index < 0 ? ZONE_ORDER.length : index; };
+    return Array.from(zones, ([name, list]) => ({ name, machines: list, busy: list.filter(machine => machine.status === 'InUse').length }))
+      .sort((a, b) => order(a.name) - order(b.name));
+  }, [machines, zoneFilter]);
+  const selectedMachine = selectedId ? machines.find(machine => machine.machineId === selectedId) : undefined;
+
+  useEffect(() => {
+    if (!selectedId) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === 'Escape') setSelectedId(null); };
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [selectedId]);
+
+  const renderPc = (machine: Machine) => {
+    const inUse = machine.status === 'InUse';
+    const state = !machine.online && !inUse ? 'is-offline' : inUse ? 'is-busy' : 'is-free';
+    const tone = inUse ? sessionTone(machine.expiresAt) : '';
+    return <button
+      key={machine.machineId}
+      type="button"
+      className={`pc ${state}${tone ? ` glow-${tone}` : ''}${visibleIds.has(machine.machineId) ? '' : ' is-dimmed'}${selectedId === machine.machineId ? ' is-selected' : ''}`}
+      title={`${machine.machineId} · ${inUse ? machine.userEmail ?? 'กำลังใช้งาน' : machine.online ? 'ว่าง' : 'ออฟไลน์'}`}
+      aria-label={`${machine.machineId} ${inUse ? 'กำลังใช้งาน' : 'ว่าง'} ${machine.online ? 'ออนไลน์' : 'ออฟไลน์'}`}
+      onClick={() => setSelectedId(machine.machineId)}
+    >
+      <span className="pc-icon" aria-hidden="true">{inUse && <s className="pc-glow" />}<i />{inUse && !machine.online && <b className="seat-offline-dot" />}</span>
+      <span className="pc-label">{machine.machineId.replace(/^\D+/, '')}</span>
+    </button>;
+  };
+
   if (loading) {
     return <main className="dashboard loading-screen">
       <div className="loading-mark"><span>LC</span></div>
@@ -258,10 +315,37 @@ export default function AdminPage() {
           </div>
         </div>
 
-        {visibleMachines.length > 0 ? <div className="machine-grid">
-          {visibleMachines.map(machine => {
+        {visibleMachines.length > 0 ? <div className={`seat-map${zoneFilter !== 'all' ? ' is-single-zone' : ''}`}>
+          <div className="seat-legend" aria-label="คำอธิบายสัญลักษณ์">
+            <span><i className="seat-key is-free" />ว่าง</span>
+            <span><i className="seat-key is-busy" />กำลังใช้งาน</span>
+            <span><i className="seat-key is-offline" />ออฟไลน์</span>
+            <span className="glow-legend">แสงวิ่งรอบจอ: <i className="glow-dot glow-ok" />เหลือเกิน 30 นาที <i className="glow-dot glow-warning" />≤ 30 นาที <i className="glow-dot glow-critical" />≤ 10 นาที</span>
+            <small>กดที่เครื่องเพื่อดูรายละเอียดและสั่งการ</small>
+          </div>
+          {seatZones.map(zone => <div className="seat-zone" key={zone.name} style={ZONE_AREAS[zone.name] ? { '--zone-area': ZONE_AREAS[zone.name] } as CSSProperties : undefined}>
+            <div className="seat-zone-head"><strong>{zone.name}</strong><span>ใช้งาน {zone.busy}/{zone.machines.length} เครื่อง</span></div>
+            {ZONE_LAYOUTS[zone.name] === 'two-columns'
+              // ชั้น-3: the first machine stands alone above the right column; the rest run in two columns, left to right.
+              ? <div className="pc-two-columns">
+                  <div className="pc-pairs">
+                    {zone.machines[0] && <div className="pc-corner">{renderPc(zone.machines[0])}</div>}
+                    {zone.machines.slice(1).map(renderPc)}
+                  </div>
+                </div>
+              : <div className="pc-rows">
+                  {chunk(zone.machines, PCS_PER_ROW).map((row, rowIndex) => <div className="pc-row" key={rowIndex}>{row.map(renderPc)}</div>)}
+                </div>}
+          </div>)}
+        </div> : <div className="empty-state"><SearchIcon /><h3>ไม่พบเครื่องที่ค้นหา</h3><p>ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะหรือโซน</p><button className="button button-ghost" onClick={() => { setQuery(''); setStatusFilter('all'); setZoneFilter('all'); }}>ล้างตัวกรอง</button></div>}
+      </section>
+
+      {selectedMachine && <div className="seat-overlay" onClick={() => setSelectedId(null)}>
+        <div role="dialog" aria-modal="true" aria-label={`รายละเอียด ${selectedMachine.machineId}`} onClick={event => event.stopPropagation()}>
+          {[selectedMachine].map(machine => {
             const inUse = machine.status === 'InUse';
-            return <article key={machine.machineId} className={`machine-card ${inUse ? 'is-active' : 'is-available'}`}>
+            return <article key={machine.machineId} className={`machine-card seat-card ${inUse ? 'is-active' : 'is-available'}`}>
+              <button type="button" className="seat-card-close" onClick={() => setSelectedId(null)} aria-label="ปิดการ์ด"><CloseIcon /></button>
               <div className="machine-top"><span className="computer-icon"><i /></span><div className="machine-badges"><span className={`connection-badge ${machine.online ? 'is-online' : 'is-offline'}`}><i />{machine.online ? 'ออนไลน์' : 'ออฟไลน์'}</span><span className="status-badge"><i />{inUse ? 'กำลังใช้งาน' : 'ว่าง'}</span></div></div>
               <div className="machine-name"><h3>{machine.name}</h3><span className="machine-zone-label">{machine.zone}</span><span>{machine.machineId}</span></div>
               <p className="machine-daily-limit">สิทธิ์ต่ออีเมล: {machine.dailyLimit === null ? 'ไม่จำกัด' : `${machine.dailyLimit} ครั้ง/วัน`}</p>
@@ -274,8 +358,8 @@ export default function AdminPage() {
               </div> : <div className="available-copy"><span>พร้อมใช้งาน</span><p>ยังไม่มีผู้ใช้เครื่องนี้</p><div className="machine-actions"><button className="button button-close" disabled={!machine.online || acting === `close:${machine.machineId}`} title={machine.online ? 'สั่งปิดโปรแกรม LockComputer' : 'เครื่องออฟไลน์'} onClick={() => closeMachine(machine.machineId)}><CloseIcon />{acting === `close:${machine.machineId}` ? 'กำลังส่งคำสั่ง...' : 'ปิดโปรแกรม'}</button><button className="button button-shutdown" disabled={!machine.online || acting === `shutdown:${machine.machineId}`} title={machine.online ? 'สั่งปิดเครื่อง Windows' : 'เครื่องออฟไลน์'} onClick={() => shutdownMachine(machine.machineId)}><PowerIcon />{acting === `shutdown:${machine.machineId}` ? 'กำลังส่งคำสั่ง...' : 'ปิดเครื่อง'}</button></div></div>}
             </article>;
           })}
-        </div> : <div className="empty-state"><SearchIcon /><h3>ไม่พบเครื่องที่ค้นหา</h3><p>ลองเปลี่ยนคำค้นหาหรือตัวกรองสถานะหรือโซน</p><button className="button button-ghost" onClick={() => { setQuery(''); setStatusFilter('all'); setZoneFilter('all'); }}>ล้างตัวกรอง</button></div>}
-      </section>
+        </div>
+      </div>}
 
       <footer><span>LockComputer Administration</span><span>มหาวิทยาลัยมหาสารคาม</span></footer>
     </div>

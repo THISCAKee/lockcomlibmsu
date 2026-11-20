@@ -2,6 +2,8 @@
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 
+// Never let these tests reach the real Google Sheet: without a credentials file the runtime uses the in-memory store.
+for (const name of ['GOOGLE_SHEETS_CREDENTIALS_FILE', 'GoogleSheets__CredentialsFile', 'GOOGLE_SHEETS_SPREADSHEET_ID', 'GoogleSheets__SpreadsheetId']) delete process.env[name];
 process.env.LOCKCOMPUTER_CLIENT_KEY = 'test-client-key';
 process.env.LOCKCOMPUTER_ROOT_ADMIN_EMAIL = 'khunanon.m@msu.ac.th';
 process.env.OAUTH_CLIENT_SECRET = 'test-oauth-secret';
@@ -22,7 +24,9 @@ test('health returns the configured store name', async () => {
   const { GET } = await import('../app/api/health/route');
   const response = await GET();
   assert.equal(response.status, 200);
-  assert.equal((await response.json()).status, 'ok');
+  const body = await response.json();
+  assert.equal(body.status, 'ok');
+  assert.equal(body.store, 'in-memory', 'route tests must never run against Google Sheets');
 });
 
 test('client poll requires both machine headers and consumes one command', async () => {

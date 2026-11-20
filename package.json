@@ -11,7 +11,7 @@
     "test:server": "tsx --test tests/app-path.test.ts tests/http.test.ts tests/oauth-return.test.ts tests/server-config.test.ts tests/zones.test.ts tests/zone-policy.test.ts tests/zone-storage.test.ts tests/zone-check-in.test.ts tests/session-manager.test.ts tests/presence-registry.test.ts tests/monthly-report.test.ts tests/activity-log.test.ts tests/google-sheets.test.ts tests/oauth.test.ts tests/auth-session.test.ts tests/client-tokens.test.ts tests/admin-registry.test.ts tests/routes-contract.test.ts"
   },
   "dependencies": {
-    "next": "^16.4.4",
+    "next": "^16.4.6",
     "react": "^19.3.0",
     "react-dom": "^19.3.0"
   },
