@@ -6,6 +6,8 @@ export const dynamic = 'force-dynamic';
 export async function GET() {
   const state = await getRuntime();
   await state.refreshSessions();
+  // Free machines whose Client went away (power off, crash, network loss) instead of showing them in use.
+  await state.zoneCheckIn.closeStaleSessions().catch(() => undefined);
   const zones = await state.zoneCheckIn.loadZones();
   const active = new Map(state.sessions.listSessions().filter(session => session.status === 'Active').map(session => [session.machineId.toLowerCase(), session]));
   const machines = Array.from({ length: state.config.machineCount }, (_, index) => {

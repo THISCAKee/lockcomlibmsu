@@ -105,6 +105,24 @@ export class SessionManager {
     return closed;
   }
 
+  /**
+   * Ends every active session whose Client stopped heartbeating (power off, crash, network
+   * loss), so the dashboard stops showing the machine as in use. Ends it at the last heartbeat.
+   */
+  closeStale(): AbandonedSession[] {
+    this.reconcileExpiredSessions();
+    const now = this.clock.now().getTime();
+    const closed: AbandonedSession[] = [];
+    for (const session of Array.from(this.sessions.values())) {
+      if (session.status !== 'Active') continue;
+      const lastSeen = this.lastSeenAt(session);
+      if (now - lastSeen <= ABANDONED_AFTER_MS) continue;
+      this.end(session.id, 'LoggedOut', new Date(lastSeen));
+      closed.push({ session, reason: 'no-heartbeat' });
+    }
+    return closed;
+  }
+
   /** Drops a session that was never persisted (its sheet append failed). */
   discard(id: string) {
     this.sessions.delete(id);

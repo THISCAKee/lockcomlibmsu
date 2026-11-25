@@ -87,3 +87,20 @@ test('a session without heartbeats for 4 minutes no longer blocks the machine or
   assert.deepEqual(closed.map(item => item.reason), ['no-heartbeat']);
   assert.equal(manager.get(old.id).endedAt, new Date(Date.parse(old.startedAt) + 3 * 60 * 1000).toISOString());
 });
+
+test('closeStale frees machines whose Client stopped heartbeating and keeps live ones', () => {
+  const clock = new ManualClock();
+  const manager = new SessionManager(clock, THREE_HOURS);
+  const gone = manager.checkIn('PC-001', 'gone@msu.ac.th');
+  const live = manager.checkIn('PC-002', 'live@msu.ac.th');
+  clock.advance(4 * 60 * 1000);
+  manager.touch(live.id);
+  assert.deepEqual(manager.closeStale(), []);
+  clock.advance(1000);
+  const closed = manager.closeStale();
+  assert.deepEqual(closed.map(item => [item.session.id, item.reason]), [[gone.id, 'no-heartbeat']]);
+  assert.equal(manager.get(gone.id).status, 'LoggedOut');
+  assert.equal(manager.get(gone.id).endedAt, gone.startedAt);
+  assert.equal(manager.get(live.id).status, 'Active');
+  assert.equal(manager.checkIn('PC-001', 'next@msu.ac.th').status, 'Active');
+});

@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import { ZoneCheckIn } from '../lib/server/zone-check-in';
 import { InMemorySheetStore } from '../lib/server/store';
 import { SessionManager } from '../lib/server/session-manager';
+import { ManualClock } from './test-clock';
 const clock = { now: () => new Date('2026-11-03T03:00:00Z') };
 test('serializes simultaneous check-ins and persists limits', async () => {
   const store = new InMemorySheetStore();
@@ -69,4 +70,19 @@ test('re-login after being kicked out replaces the leftover session without usin
   assert.notEqual(second.id, first.id);
   assert.equal(sessions.get(first.id).status, 'LoggedOut');
   assert.equal(store.eventRows.some(row => row[1] === first.id && row[4] === 'session-abandoned' && row[5] === 'same-user-relogin'), true);
+});
+test('closeStaleSessions records sessions whose Client went away', async () => {
+  const time = new ManualClock(new Date('2026-11-03T03:00:00Z'));
+  const store = new InMemorySheetStore();
+  const sessions = new SessionManager(time, 3 * 60 * 60 * 1000);
+  const service = new ZoneCheckIn(store, sessions, time, 203);
+  const session = await service.checkIn('PC-194', 'student@msu.ac.th');
+  time.advance(3 * 60 * 1000);
+  assert.deepEqual(await service.closeStaleSessions(), []);
+  time.advance(2 * 60 * 1000);
+  const closed = await service.closeStaleSessions();
+  assert.deepEqual(closed.map(item => item.session.id), [session.id]);
+  assert.equal(sessions.get(session.id).status, 'LoggedOut');
+  assert.equal(store.sessionRows.some(row => row[0] === session.id && row[5] === 'LoggedOut'), true);
+  assert.equal(store.eventRows.some(row => row[1] === session.id && row[4] === 'session-abandoned' && row[5] === 'no-heartbeat'), true);
 });

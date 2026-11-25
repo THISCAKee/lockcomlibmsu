@@ -349,6 +349,7 @@ export default function AdminPage() {
               <div className="machine-top"><span className="computer-icon"><i /></span><div className="machine-badges"><span className={`connection-badge ${machine.online ? 'is-online' : 'is-offline'}`}><i />{machine.online ? 'ออนไลน์' : 'ออฟไลน์'}</span><span className="status-badge"><i />{inUse ? 'กำลังใช้งาน' : 'ว่าง'}</span></div></div>
               <div className="machine-name"><h3>{machine.name}</h3><span className="machine-zone-label">{machine.zone}</span><span>{machine.machineId}</span></div>
               <p className="machine-daily-limit">สิทธิ์ต่ออีเมล: {machine.dailyLimit === null ? 'ไม่จำกัด' : `${machine.dailyLimit} ครั้ง/วัน`}</p>
+              {!machine.online && <p className="machine-offline-note" role="note"><strong>{machine.lastSeenAt ? `ขาดการติดต่อตั้งแต่ ${formatTime(machine.lastSeenAt)} น.` : 'ยังไม่ได้ติดต่อเซิร์ฟเวอร์'}</strong>เครื่องอาจปิดไปแล้ว โปรแกรมถูกปิด หรือเน็ตหลุด จึงสั่งปิดโปรแกรม/ปิดเครื่องจากที่นี่ไม่ได้{inUse ? ' (session ที่ขาดการติดต่อเกิน 4 นาทีจะถูกปิดให้อัตโนมัติ)' : ''}</p>}
               {inUse ? <div className="session-detail">
                 <p><span>ผู้ใช้งาน</span><strong title={machine.userEmail}>{machine.userEmail}</strong></p>
                 <p><span>เริ่มใช้งาน</span><strong>{formatTime(machine.startedAt)} น.</strong></p>

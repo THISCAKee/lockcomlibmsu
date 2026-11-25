@@ -1,7 +1,7 @@
 ﻿import { MACHINE_ZONES } from './zones';
 import { dailyUsage, validateZones, type Zone } from './zone-policy';
 import { sessionRow } from './route-views';
-import { SessionConflictError, type Clock, type SessionManager } from './session-manager';
+import { SessionConflictError, type AbandonedSession, type Clock, type SessionManager } from './session-manager';
 import type { SheetStore } from './store';
 
 export function defaultZones(): Zone[] {
@@ -25,6 +25,18 @@ export class ZoneCheckIn {
       return { id: zone.id, name: zone.name, dailyLimit: zone.dailyLimit, used, remaining: zone.dailyLimit === null ? null : Math.max(0, zone.dailyLimit - used) };
     });
   }
+  /** Ends sessions whose Client stopped heartbeating and records them in the sheet. */
+  closeStaleSessions() { return this.locked(async () => {
+    const closed = this.sessions.closeStale();
+    await this.persistAbandoned(closed);
+    return closed;
+  }); }
+  private async persistAbandoned(abandoned: AbandonedSession[]) {
+    for (const { session, reason } of abandoned) {
+      await this.store.appendSession(sessionRow(session, 'updated'));
+      await this.store.appendEvent([session.endedAt ?? this.clock.now().toISOString(), session.id, session.machineId, '', 'session-abandoned', reason]).catch(() => undefined);
+    }
+  }
   saveZones(value: unknown) { return this.locked(async () => { const zones = validateZones(value, this.machineCount); await this.store.saveZones(zones); return zones; }); }
   checkIn(machineId: string, email: string) { return this.locked(async () => {
     const zones = await this.loadZones();
@@ -32,10 +44,7 @@ export class ZoneCheckIn {
     const records = await this.store.loadSessions();
     this.sessions.replace(records);
     const abandoned = this.sessions.closeAbandoned(machineId, email);
-    for (const { session, reason } of abandoned) {
-      await this.store.appendSession(sessionRow(session, 'updated'));
-      await this.store.appendEvent([session.endedAt ?? this.clock.now().toISOString(), session.id, session.machineId, '', 'session-abandoned', reason]).catch(() => undefined);
-    }
+    await this.persistAbandoned(abandoned);
     // Signing in again on the same machine continues the same visit, so it does not use up another daily turn.
     const continued = new Set(abandoned.filter(item => item.reason === 'same-user-relogin').map(item => item.session.id));
     const attributed = this.sessions.listSessions()
